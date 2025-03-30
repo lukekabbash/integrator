@@ -1,46 +1,33 @@
 import OpenAI from 'openai';
 import { Message } from '../types/chat';
+import { getBaseModelName, getModelConfig } from '../utils/modelUtils';
 
-// Initialize the OpenAI client
-const API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
-const openai = new OpenAI({
-  apiKey: API_KEY as string,
-  dangerouslyAllowBrowser: true // Allowing browser usage - in production, use a backend proxy
-});
+// Initialize the OpenAI client with provider-specific configuration
+const getOpenAIClient = (modelName: string) => {
+  // Configure base URL and API key based on model provider
+  if (modelName.startsWith('grok-')) {
+    return new OpenAI({
+      apiKey: process.env.REACT_APP_XAI_API_KEY as string,
+      baseURL: "https://api.x.ai/v1",
+      dangerouslyAllowBrowser: true
+    });
+  } else if (modelName.startsWith('deepseek-')) {
+    return new OpenAI({
+      apiKey: process.env.REACT_APP_DEEPSEEK_API_KEY as string,
+      baseURL: "https://api.deepseek.com/v1",
+      dangerouslyAllowBrowser: true
+    });
+  }
+
+  // Default OpenAI configuration
+  return new OpenAI({
+    apiKey: process.env.REACT_APP_OPENAI_API_KEY as string,
+    dangerouslyAllowBrowser: true
+  });
+};
 
 // Default model name
 const DEFAULT_MODEL = 'gpt-4o-latest';
-
-// OpenAI model configuration for optimal streaming performance
-const getModelConfig = (modelName: string) => {
-  // Base configuration for all models
-  const baseConfig: {
-    temperature: number;
-    top_p: number;
-    max_tokens: number;
-  } = {
-    temperature: 0.7,
-    top_p: 0.95,
-    max_tokens: 4096,
-  };
-  
-  // Model-specific optimizations
-  if (modelName === 'gpt-4o-mini') {
-    return {
-      ...baseConfig,
-      // More tokens for the mini model since it's faster
-      max_tokens: 8192,
-    };
-  } else if (modelName === 'gpt-4o-latest') {
-    return {
-      ...baseConfig,
-      // Lower temperature for more precise responses
-      temperature: 0.6,
-    };
-  }
-  
-  return baseConfig;
-};
 
 // Helper function to format messages for OpenAI API
 const formatMessagesForOpenAI = (messages: Message[], systemPrompt?: string): Array<OpenAI.ChatCompletionMessageParam> => {
@@ -74,12 +61,16 @@ export const generateOpenAIStreamingResponse = async (
   streamingOptions?: { renderInterval?: number }
 ): Promise<string> => {
   try {
+    const openai = getOpenAIClient(modelName);
     const formattedMessages = formatMessagesForOpenAI(messages, systemPrompt);
     const config = getModelConfig(modelName);
     
+    // Get the actual model name without version suffixes
+    const actualModelName = getBaseModelName(modelName);
+    
     // Use custom render interval if provided, otherwise default to 5ms for super fast streaming
     const RENDER_INTERVAL = streamingOptions?.renderInterval || 5;
-    console.log(`OpenAI streaming with render interval: ${RENDER_INTERVAL}ms, model: ${modelName}`);
+    console.log(`OpenAI streaming with render interval: ${RENDER_INTERVAL}ms, model: ${actualModelName}`);
     
     // For extremely fast streaming (5ms or less), use requestAnimationFrame for smooth rendering
     const useAnimationFrame = RENDER_INTERVAL <= 5;
@@ -104,7 +95,7 @@ export const generateOpenAIStreamingResponse = async (
 
     // Create a streaming completion
     const stream = await openai.chat.completions.create({
-      model: modelName,
+      model: actualModelName,
       messages: formattedMessages as OpenAI.ChatCompletionMessageParam[],
       temperature: config.temperature,
       top_p: config.top_p,
@@ -175,9 +166,12 @@ export const generateOpenAIStreamingResponse = async (
 // Check if OpenAI model is available
 export const checkOpenAIModelAvailability = async (modelName: string): Promise<{available: boolean, supportsStreaming: boolean}> => {
   try {
+    // For Grok models, remove the '-latest' suffix
+    const actualModelName = modelName.startsWith('grok-') ? modelName.replace('-latest', '') : modelName;
+    
     // Simple request to check if the model is available
-    await openai.chat.completions.create({
-      model: modelName,
+    await getOpenAIClient(modelName).chat.completions.create({
+      model: actualModelName,
       messages: [{ role: 'user', content: 'Hello' }] as OpenAI.ChatCompletionMessageParam[],
       max_tokens: 5
     });

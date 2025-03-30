@@ -11,7 +11,8 @@ import {
   ListItemButton, 
   Divider,
   InputAdornment,
-  useTheme
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
@@ -35,6 +36,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
   onDeleteChat,
 }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredSessions = sessions.filter(session => 
@@ -44,7 +46,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
   return (
     <Box
       sx={{
-        width: 300,
+        width: isMobile ? '100%' : 300,
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -54,18 +56,20 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
     >
       <Box 
         sx={{ 
-          p: 2, 
+          p: isMobile ? 1.5 : 2, 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: 2
+          gap: isMobile ? 1.5 : 2
         }}
       >
-        <Typography 
-          variant="h6"
-          sx={{ fontWeight: 'bold', mb: 1, color: 'text.primary' }}
-        >
-          AI Integrator
-        </Typography>
+        {!isMobile && (
+          <Typography 
+            variant="h6"
+            sx={{ fontWeight: 'bold', mb: 1, color: 'text.primary' }}
+          >
+            AI Integrator
+          </Typography>
+        )}
 
         <Box>
           <TextField
@@ -78,12 +82,13 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
               mb: 1,
               '& .MuiOutlinedInput-root': {
                 bgcolor: 'background.default',
+                fontSize: isMobile ? '0.875rem' : '1rem',
               }
             }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
+                  <SearchIcon fontSize={isMobile ? "small" : "medium"} />
                 </InputAdornment>
               ),
             }}
@@ -95,12 +100,15 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
           startIcon={<AddIcon />}
           onClick={onNewChat}
           fullWidth
+          size={isMobile ? "small" : "medium"}
           sx={{
             borderRadius: 1.5,
             justifyContent: 'flex-start',
             textTransform: 'none',
-            py: 1,
+            py: isMobile ? 0.75 : 1,
             bgcolor: 'background.default',
+            fontSize: isMobile ? '0.875rem' : '1rem',
+            color: 'white'
           }}
         >
           New Chat
@@ -114,7 +122,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
           overflow: 'auto', 
           flexGrow: 1,
           '&::-webkit-scrollbar': {
-            width: '8px',
+            width: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
             backgroundColor: theme.palette.mode === 'dark' 
@@ -145,7 +153,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
                   }}
                   sx={{ opacity: 0.6, '&:hover': { opacity: 1 } }}
                 >
-                  <DeleteOutlineIcon fontSize="small" />
+                  <DeleteOutlineIcon fontSize={isMobile ? "small" : "medium"} />
                 </IconButton>
               }
               sx={{ pr: 6 }}
@@ -157,6 +165,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
                   borderRadius: 1,
                   mx: 1,
                   my: 0.5,
+                  py: isMobile ? 0.75 : 1,
                   '&.Mui-selected': {
                     backgroundColor: 'action.selected',
                     '&:hover': {
@@ -166,7 +175,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
                 }}
               >
                 <ChatIcon 
-                  fontSize="small" 
+                  fontSize={isMobile ? "small" : "medium"}
                   sx={{ 
                     mr: 1.5, 
                     color: 'text.secondary' 
@@ -176,12 +185,12 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
                   primary={session.title}
                   primaryTypographyProps={{
                     noWrap: true,
-                    fontSize: '0.9rem',
+                    fontSize: isMobile ? '0.875rem' : '0.9rem',
                   }}
                   secondary={new Date(session.updatedAt).toLocaleDateString()}
                   secondaryTypographyProps={{
                     noWrap: true,
-                    fontSize: '0.75rem',
+                    fontSize: isMobile ? '0.75rem' : '0.8rem',
                   }}
                 />
               </ListItemButton>

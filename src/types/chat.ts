@@ -1,4 +1,4 @@
-export type MessageRole = 'user' | 'model';
+export type MessageRole = 'user' | 'model' | 'assistant';
 export type ModelProvider = 'google' | 'openai' | 'xai' | 'deepseek';
 
 export interface Message {

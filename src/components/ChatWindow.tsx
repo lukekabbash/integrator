@@ -4,12 +4,14 @@ import {
   Typography, 
   Paper, 
   useTheme, 
-  Divider, 
-  Switch, 
-  FormControlLabel,
-  Tooltip,
+  useMediaQuery,
+  IconButton,
+  Drawer,
   Stack
 } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
+import SettingsIcon from '@mui/icons-material/Settings';
+import CloseIcon from '@mui/icons-material/Close';
 import { Message, ChatSession, ModelProvider } from '../types/chat';
 import ChatBubble from './ChatBubble';
 import ChatInput from './ChatInput';
@@ -60,6 +62,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onRegenerateFromMessage
 }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [editMessageText, setEditMessageText] = useState<string>('');
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -119,16 +124,82 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         width: '100%',
         height: '100%',
         overflow: 'hidden',
+        position: 'relative',
       }}
     >
+      {/* Mobile Header */}
+      {isMobile && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '56px',
+            bgcolor: 'background.paper',
+            zIndex: 1200,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 2,
+            borderBottom: 1,
+            borderColor: 'divider',
+          }}
+        >
+          <IconButton onClick={() => setLeftSidebarOpen(true)} size="small">
+            <MenuIcon />
+          </IconButton>
+          <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
+            {activeSession?.title || 'New Chat'}
+          </Typography>
+          <IconButton onClick={() => setRightSidebarOpen(true)} size="small">
+            <SettingsIcon />
+          </IconButton>
+        </Box>
+      )}
+
       {/* Left Sidebar - Chat History */}
-      <LeftSidebar 
-        sessions={sessions}
-        activeSessionId={activeSessionId}
-        onSessionSelect={onSessionSelect}
-        onNewChat={onNewChat}
-        onDeleteChat={onDeleteChat}
-      />
+      {isMobile ? (
+        <Drawer
+          anchor="left"
+          open={leftSidebarOpen}
+          onClose={() => setLeftSidebarOpen(false)}
+          PaperProps={{
+            sx: {
+              width: '100%',
+              maxWidth: '320px',
+              bgcolor: 'background.paper',
+            }
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
+            <IconButton onClick={() => setLeftSidebarOpen(false)} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <LeftSidebar 
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            onSessionSelect={(id) => {
+              onSessionSelect(id);
+              setLeftSidebarOpen(false);
+            }}
+            onNewChat={() => {
+              onNewChat();
+              setLeftSidebarOpen(false);
+            }}
+            onDeleteChat={onDeleteChat}
+          />
+        </Drawer>
+      ) : (
+        <LeftSidebar 
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSessionSelect={onSessionSelect}
+          onNewChat={onNewChat}
+          onDeleteChat={onDeleteChat}
+        />
+      )}
 
       {/* Main Chat Area */}
       <Box
@@ -140,9 +211,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           position: 'relative',
           overflow: 'hidden',
           mx: 'auto',
-          maxWidth: '1200px',
+          maxWidth: isMobile ? '100%' : '1200px',
           width: '100%',
-          pl: { xs: 2, md: 4 },
+          pl: isMobile ? 0 : 2,
+          pr: isMobile ? 0 : 2,
+          pt: isMobile ? '56px' : 0,
         }}
       >
         <Paper
@@ -155,89 +228,23 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             bgcolor: 'background.default',
             position: 'relative',
             overflow: 'hidden',
+            width: '100%',
           }}
         >
-          {/* Top gradient overlay */}
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '210px',
-              background: (theme) => `linear-gradient(to bottom, ${theme.palette.background.default} 30%, transparent)`,
-              pointerEvents: 'none',
-              zIndex: 1,
-            }}
-          />
-
-          {/* Bottom gradient overlay */}
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: '160px',
-              background: (theme) => `linear-gradient(to top, ${theme.palette.background.default} 30%, transparent)`,
-              pointerEvents: 'none',
-              zIndex: 1,
-            }}
-          />
-
-          {/* Header */}
-          <Box
-            sx={{
-              position: 'relative',
-              zIndex: 2,
-              py: 1,
-              display: 'flex',
-              justifyContent: 'center',
-              background: 'transparent',
-            }}
-          >
-            <Box
-              sx={{
-                py: 1.5,
-                px: 2.5,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: 'rgb(32, 32, 32)',
-                borderRadius: '8px',
-                maxWidth: 'min(400px, 80%)',
-              }}
-            >
-              <Typography 
-                variant="h6" 
-                fontWeight="medium" 
-                color="text.primary"
-                sx={{
-                  fontSize: '1.1rem',
-                  letterSpacing: '0.01em',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  textAlign: 'center',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {activeSession?.title || 'New Chat'}
-              </Typography>
-            </Box>
-          </Box>
-
           {/* Messages container */}
           <Box
             ref={messagesEndRef}
             sx={{
               flexGrow: 1,
               overflowY: 'auto',
-              position: 'relative',
-              pt: '210px',
-              mt: '-210px',
+              overflowX: 'hidden',
+              px: { xs: 1, sm: 2 },
+              py: 2,
+              scrollBehavior: 'smooth',
+              '& > *': {
+                mb: isMobile ? 1 : 2,
+                maxWidth: '100%',
+              }
             }}
           >
             {messages.length === 0 ? (
@@ -249,23 +256,34 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                   justifyContent: 'center',
                   alignItems: 'center',
                   opacity: 0.7,
-                  gap: 2,
+                  gap: isMobile ? 1 : 2,
                 }}
               >
                 <Box>
-                  <Typography 
-                    variant="h2" 
-                    color="text.primary" 
-                    sx={{ fontSize: '5rem', opacity: 0.7 }}
-                  >
-                    G
-                  </Typography>
+                  <Box
+                    component="img"
+                    src="/INT LOGO2.png"
+                    alt="AI Integrator Logo"
+                    sx={{ 
+                      width: isMobile ? '80px' : '120px',
+                      height: 'auto',
+                      opacity: 0.7
+                    }}
+                  />
                 </Box>
                 <Typography variant="body1" color="text.secondary">
-                  Start a conversation with Gemini AI
+                  Start a conversation with AI Integrator
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: '80%', textAlign: 'center' }}>
-                  Ask me anything about code, math, science, or general knowledge. I'm powered by Gemini models.
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary" 
+                  sx={{ 
+                    maxWidth: '80%', 
+                    textAlign: 'center',
+                    fontSize: isMobile ? '0.875rem' : '1rem'
+                  }}
+                >
+                  Your models, your way.
                 </Typography>
               </Box>
             ) : (
@@ -280,7 +298,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                     isEditing={editingMessageId === message.id}
                   />
                 ))}
-                <div ref={messagesEndRef} />
+                {isLoading && (
+                  <ChatBubble 
+                    message={{ 
+                      id: 'loading', 
+                      role: 'model', 
+                      content: '...', 
+                      timestamp: new Date() 
+                    }} 
+                    isLatest={true}
+                  />
+                )}
               </>
             )}
           </Box>
@@ -290,9 +318,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             sx={{ 
               position: 'relative',
               zIndex: 2,
-              py: 1,
-              px: 2,
+              py: isMobile ? 0.5 : 1,
+              px: { xs: 1, sm: 2 },
               background: 'transparent',
+              width: '100%',
             }}
           >
             <ChatInput 
@@ -307,14 +336,49 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       </Box>
 
       {/* Right Sidebar - Settings */}
-      <RightSidebar
-        modelName={modelName}
-        provider={provider}
-        systemPrompt={systemPrompt}
-        onModelChange={onModelChange}
-        onSystemPromptChange={onSystemPromptChange}
-        onProviderChange={onProviderChange}
-      />
+      {isMobile ? (
+        <Drawer
+          anchor="right"
+          open={rightSidebarOpen}
+          onClose={() => setRightSidebarOpen(false)}
+          PaperProps={{
+            sx: {
+              width: '100%',
+              maxWidth: '320px',
+              bgcolor: 'background.paper',
+            }
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
+            <IconButton onClick={() => setRightSidebarOpen(false)} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <RightSidebar
+            modelName={modelName}
+            provider={provider}
+            systemPrompt={systemPrompt}
+            onModelChange={(model) => {
+              onModelChange(model);
+              setRightSidebarOpen(false);
+            }}
+            onSystemPromptChange={(prompt) => {
+              onSystemPromptChange(prompt);
+              setRightSidebarOpen(false);
+            }}
+            onProviderChange={onProviderChange}
+          />
+        </Drawer>
+      ) : (
+        <RightSidebar
+          modelName={modelName}
+          provider={provider}
+          systemPrompt={systemPrompt}
+          onModelChange={onModelChange}
+          onSystemPromptChange={onSystemPromptChange}
+          onProviderChange={onProviderChange}
+        />
+      )}
     </Box>
   );
 };

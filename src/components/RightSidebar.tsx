@@ -1,34 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  TextField, 
-  MenuItem, 
-  Select, 
-  FormControl, 
+import {
+  Box,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
   InputLabel,
+  Typography,
   Button,
-  Divider,
-  useTheme,
-  SelectChangeEvent,
   FormHelperText,
+  useTheme,
+  useMediaQuery,
   Alert,
-  Stack,
-  ButtonGroup,
-  Tooltip
+  Tooltip,
 } from '@mui/material';
-import { ALL_MODELS, Model, ModelProvider } from '../types/chat';
+import { ModelProvider } from '../types/chat';
+import { supportsSystemPrompt } from '../utils/modelUtils';
 import ModelSelector from './ModelSelector';
-
-// Check if the selected model supports system prompts
-const supportsSystemPrompt = (modelName: string): boolean => {
-  // Some models may not support system prompts
-  const nonSupportedModels: string[] = [
-    'gemini-1.5-flash-8b'
-  ];
-  
-  return !nonSupportedModels.includes(modelName);
-};
 
 interface RightSidebarProps {
   modelName: string;
@@ -48,6 +36,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   onProviderChange
 }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [localSystemPrompt, setLocalSystemPrompt] = useState<string>(systemPrompt);
   const [showSystemPromptWarning, setShowSystemPromptWarning] = useState<boolean>(!supportsSystemPrompt(modelName));
   
@@ -67,7 +56,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     <Box 
       sx={{ 
         height: '100%',
-        width: '300px',
+        width: isMobile ? '100%' : '300px',
         bgcolor: 'background.paper',
         borderLeft: 1,
         borderColor: 'divider',
@@ -76,10 +65,15 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         overflowY: 'auto'
       }}
     >
-      <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <Box sx={{ 
+        p: isMobile ? 1.5 : 3, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: isMobile ? 2 : 3 
+      }}>
         <Box>
           <Typography 
-            variant="subtitle2" 
+            variant={isMobile ? "subtitle2" : "subtitle1"}
             sx={{ fontWeight: 'medium', mb: 1 }}
           >
             Model Selection
@@ -95,7 +89,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         {/* System Prompt Section */}
         <Box>
           <Typography 
-            variant="subtitle2" 
+            variant={isMobile ? "subtitle2" : "subtitle1"}
             sx={{ 
               fontWeight: 'medium', 
               mb: 1,
@@ -107,7 +101,16 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             System Prompt
             {showSystemPromptWarning && (
               <Tooltip title="This model does not support system prompts">
-                <Alert severity="warning" sx={{ mt: 1 }}>
+                <Alert 
+                  severity="warning" 
+                  sx={{ 
+                    mt: 1,
+                    py: isMobile ? 0.5 : 1,
+                    '& .MuiAlert-message': {
+                      fontSize: isMobile ? '0.75rem' : '0.875rem'
+                    }
+                  }}
+                >
                   This model does not support system prompts
                 </Alert>
               </Tooltip>
@@ -115,25 +118,26 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           </Typography>
           <TextField
             multiline
-            rows={4}
+            rows={isMobile ? 3 : 4}
             value={localSystemPrompt}
             onChange={handleSystemPromptChange}
             placeholder="Enter system instructions..."
             fullWidth
-            size="small"
+            size={isMobile ? "small" : "medium"}
             sx={{ 
               bgcolor: 'background.default',
               '& .MuiOutlinedInput-root': {
                 '& fieldset': {
                   borderColor: 'divider',
                 },
+                fontSize: isMobile ? '0.875rem' : '1rem',
               },
             }}
           />
           <Button 
             onClick={handleSystemPromptSave}
             variant="contained" 
-            size="small"
+            size={isMobile ? "small" : "medium"}
             sx={{ mt: 1 }}
             disabled={showSystemPromptWarning}
           >
@@ -144,19 +148,26 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         {/* Parameters Section */}
         <Box>
           <Typography 
-            variant="subtitle2" 
+            variant={isMobile ? "subtitle2" : "subtitle1"}
             sx={{ fontWeight: 'medium', mb: 1 }}
           >
             Parameters
           </Typography>
-          <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+          <FormControl 
+            fullWidth 
+            size={isMobile ? "small" : "medium"} 
+            sx={{ mb: 2 }}
+          >
             <InputLabel id="temperature-label">Temperature</InputLabel>
             <Select
               labelId="temperature-label"
               id="temperature-select"
               value="0.5"
               label="Temperature"
-              sx={{ bgcolor: 'background.default' }}
+              sx={{ 
+                bgcolor: 'background.default',
+                fontSize: isMobile ? '0.875rem' : '1rem',
+              }}
             >
               <MenuItem value="0.1">0.1 - More precise</MenuItem>
               <MenuItem value="0.3">0.3</MenuItem>
@@ -164,17 +175,25 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
               <MenuItem value="0.7">0.7</MenuItem>
               <MenuItem value="1.0">1.0 - More creative</MenuItem>
             </Select>
-            <FormHelperText>Controls randomness of responses</FormHelperText>
+            <FormHelperText sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
+              Controls randomness of responses
+            </FormHelperText>
           </FormControl>
           
-          <FormControl fullWidth size="small">
+          <FormControl 
+            fullWidth 
+            size={isMobile ? "small" : "medium"}
+          >
             <InputLabel id="max-length-label">Max Output Tokens</InputLabel>
             <Select
               labelId="max-length-label"
               id="max-length-select"
               value="2048"
               label="Max Output Tokens"
-              sx={{ bgcolor: 'background.default' }}
+              sx={{ 
+                bgcolor: 'background.default',
+                fontSize: isMobile ? '0.875rem' : '1rem',
+              }}
             >
               <MenuItem value="512">512</MenuItem>
               <MenuItem value="1024">1024</MenuItem>
@@ -182,7 +201,9 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
               <MenuItem value="4096">4096</MenuItem>
               <MenuItem value="8192">8192</MenuItem>
             </Select>
-            <FormHelperText>Limits length of AI responses</FormHelperText>
+            <FormHelperText sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
+              Limits length of AI responses
+            </FormHelperText>
           </FormControl>
         </Box>
       </Box>
