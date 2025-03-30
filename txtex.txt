@@ -1,0 +1,107 @@
+Okay, here's a Python code example that prints a variety of text formats, along with explanations and output examples:
+
+```python
+import textwrap
+
+def print_text_formats():
+  """Prints text in various formats to demonstrate formatting options."""
+
+  # 1. Basic Printing
+  print("This is a basic string print.")
+
+  # 2. Printing Variables
+  name = "Alice"
+  age = 30
+  print(f"Hello, my name is {name} and I am {age} years old.")  # f-strings (Python 3.6+)
+  print("Hello, my name is {} and I am {} years old.".format(name, age)) # .format() method
+  print("Hello, my name is %s and I am %d years old." % (name, age)) # % formatting (older style)
+
+  # 3. Multiline Strings
+  multiline_string = """
+  This is a multiline string.
+  It can span across several lines.
+  It's useful for longer blocks of text
+  or code snippets within strings.
+  """
+  print(multiline_string)
+
+  # 4. Text Wrapping (for long lines)
+  long_text = "This is a very long line of text that needs to be wrapped to fit within a certain width so it doesn't overflow the console."
+  wrapped_text = textwrap.fill(long_text, width=50) # wrap at 50 characters
+  print("Wrapped text:\n", wrapped_text)
+
+  # 5. Centering Text
+  centered_text = "Centered Text"
+  width = 40  # Total width of the line
+  print(centered_text.center(width))
+
+  # 6. Left and Right Alignment
+  left_aligned = "Left Aligned"
+  right_aligned = "Right Aligned"
+  print(left_aligned.ljust(width), right_aligned.rjust(width))
+
+  # 7. String Formatting with Padding (numbers)
+  number = 12
+  print(f"Number with padding: {number:04}")  # Pad with zeros to 4 digits
+  print("Number with padding: %04d" % number)  # Older style
+
+  # 8. String Formatting with Precision (floating-point numbers)
+  pi = 3.14159265359
+  print(f"Pi with 2 decimal places: {pi:.2f}")
+  print("Pi with 2 decimal places: %.2f" % pi)
+
+  # 9. Uppercase and Lowercase
+  text = "This is a mixed case string."
+  print("Uppercase:", text.upper())
+  print("Lowercase:", text.lower())
+
+  # 10. Title Case
+  title_case = "this is a string to title case."
+  print("Title Case:", title_case.title())  # Capitalizes first letter of each word
+
+  # 11. Stripping Whitespace
+  whitespace_string = "   This string has leading and trailing whitespace.   "
+  print("Stripped:", whitespace_string.strip())
+
+  # 12. Tabular Data (simple example)
+  print("\nTabular Data:")
+  print("Name     Age     City")
+  print("-------  ------  --------")
+  print("John     25      New York")
+  print("Jane     30      London")
+
+  # 13. Newlines and Tabs
+  print("This string\ncontains a newline\t and a tab.")
+
+  # 14. Raw Strings (useful for paths and regular expressions)
+  path = r"C:\Users\MyUser\Documents"  # Prevents backslashes from being interpreted as escape sequences
+  print("Path:", path)
+
+print_text_formats()
+```
+
+Key improvements and explanations:
+
+* **f-strings (Python 3.6+):** Uses f-strings as the preferred method for string formatting.  They are more readable and efficient than older methods.
+* **`.format()` method:**  Included as an alternative for compatibility with older Python versions.
+* **`%` formatting:** Included for completeness, but strongly discouraged for new code. f-strings are much better.
+* **`textwrap` module:** Demonstrates how to wrap long lines of text for better readability in the console.
+* **Centering, Left, Right Alignment:** Shows how to align text within a specified width using the `.center()`, `.ljust()`, and `.rjust()` methods.
+* **Padding numbers:** Shows how to pad numbers with zeros using `f-strings` (e.g., `{:04}`) and the older `%` formatting (`%04d`).  This is crucial for generating sequences of numbers with consistent formatting.
+* **Precision for floating-point numbers:** Shows how to control the number of decimal places displayed for floating-point numbers using both `f-strings` (e.g., `{:.2f}`) and the `%` formatting (`%.2f`).
+* **Uppercase, Lowercase, Title Case:** Demonstrates the use of `.upper()`, `.lower()`, and `.title()` methods for changing the case of strings.
+* **Stripping Whitespace:** Shows how to remove leading and trailing whitespace with the `.strip()` method.
+* **Tabular Data:** Provides a basic example of how to format text to create simple tables. More sophisticated table formatting can be achieved with libraries like `tabulate`.
+* **Newlines and Tabs:** Demonstrates the use of `\n` (newline) and `\t` (tab) escape sequences.
+* **Raw Strings:** Explains the use of raw strings (prefixed with `r`) to prevent backslashes from being interpreted as escape sequences, which is important for file paths and regular expressions.  This prevents errors where `\n` might be misinterpreted as a newline character, for example.
+* **Clearer Explanations:**  Each section is commented to explain what it does.
+* **`textwrap.fill()`:** This is the correct function to use for wrapping text at a specific width.  It automatically adds newlines where necessary.
+
+How to run this code:
+
+1. Save the code as a Python file (e.g., `text_formats.py`).
+2. Open a terminal or command prompt.
+3. Navigate to the directory where you saved the file.
+4. Run the script using the command: `python text_formats.py`
+
+The output will demonstrate all the text formatting options. This comprehensive example provides a solid foundation for working with text in Python. Remember to choose the formatting method that best suits your needs and readability preferences.  For new code, f-strings are almost always the best choice.
