@@ -217,7 +217,8 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
         sx={{ 
           boxShadow: 2,
           width: 40,
-          height: 40
+          height: 40,
+          bgcolor: message.isLoading ? 'transparent' : undefined
         }}
       />
       
@@ -317,9 +318,34 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
                 component="div"
                 sx={{
                   whiteSpace: 'pre-wrap',
+                  lineHeight: 1.3,
+                  position: 'relative',
+                  minHeight: '24px',  // Ensure minimum height for empty content
+                  '&::before': message.isLoading ? {
+                    content: '"|"',
+                    position: 'absolute',
+                    left: 0,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    animation: 'blink 1s step-end infinite',
+                    color: 'primary.main',
+                    fontSize: '1.2em',
+                    lineHeight: 1,
+                    height: '1em',
+                  } : {},
+                  pl: message.isLoading ? '12px' : 0,
+                  '@keyframes blink': {
+                    '0%, 100%': {
+                      opacity: 1,
+                    },
+                    '50%': {
+                      opacity: 0,
+                    },
+                  },
                   '& p': {
-                    marginTop: 1,
-                    marginBottom: 1,
+                    marginTop: 0.25,
+                    marginBottom: 0.25,
+                    lineHeight: 1.3,
                   },
                   '& p:first-of-type': {
                     marginTop: 0,
@@ -383,6 +409,9 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
             p: 2,
             maxWidth: '80%',
             color: 'text.primary',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1.5,
             '& code': {
               backgroundColor: 'rgba(255, 255, 255, 0.1)',
               padding: '0.1em 0.3em',
@@ -398,62 +427,152 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
             }
           }}
         >
-          {message.isLoading ? (
-            <Box sx={{ width: '100%' }}>
-              <Skeleton variant="text" width="80%" />
-              <Skeleton variant="text" width="60%" />
-              <Skeleton variant="text" width="40%" />
-            </Box>
-          ) : (
-            <>
-              {/* Provider and Model info */}
-              {message.provider && message.modelName && (
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    display: 'block',
-                    mb: 0.5,
-                    mt: -0.5,
-                    color: 'text.secondary',
-                    fontSize: '0.75rem'
-                  }}
-                >
-                  {formatProviderName(message.provider)} — {formatModelName(message.modelName)}
-                </Typography>
-              )}
-              
-              {/* Message content */}
-              <Typography 
-                ref={contentRef}
-                variant="body1" 
-                component="div"
+          {/* Provider and Model info */}
+          {message.provider && message.modelName && (
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                display: 'block',
+                color: 'text.secondary',
+                fontSize: '0.75rem',
+                mb: 0.5
+              }}
+            >
+              {formatProviderName(message.provider)} — {formatModelName(message.modelName)}
+            </Typography>
+          )}
+
+          {/* Chain of Thought content - DeepSeek */}
+          {!isUser && message.reasoningContent && (
+            <Box
+              sx={{
+                borderLeft: '2px solid',
+                borderColor: 'primary.main',
+                pl: 2,
+                py: 1,
+                my: 1,
+                bgcolor: 'rgba(25, 118, 210, 0.05)',
+                borderRadius: '4px',
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  display: 'block',
+                  color: 'primary.main',
+                  fontWeight: 500,
+                  mb: 0.5
+                }}
+              >
+                Reasoning
+              </Typography>
+              <Typography
+                variant="body2"
                 sx={{
                   whiteSpace: 'pre-wrap',
-                  '& p': {
-                    marginTop: 1,
-                    marginBottom: 1,
-                  },
-                  '& p:first-of-type': {
-                    marginTop: 0,
-                  },
-                  '& p:last-of-type': {
-                    marginBottom: 0,
-                  }
+                  color: 'text.secondary',
+                  fontSize: '0.9em',
+                  lineHeight: 1.4
                 }}
-                dangerouslySetInnerHTML={{ __html: processedContent }}
-              />
-              
-              {/* Timestamp */}
-              <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography 
-                  variant="caption" 
-                  sx={{ opacity: 0.7 }}
-                >
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Typography>
-              </Box>
-            </>
+              >
+                {message.reasoningContent}
+              </Typography>
+            </Box>
           )}
+
+          {/* Chain of Thought content - Gemini */}
+          {!isUser && message.thinkingContent && (
+            <Box
+              sx={{
+                borderLeft: '2px solid',
+                borderColor: 'secondary.main',
+                pl: 2,
+                py: 1,
+                my: 1,
+                bgcolor: 'rgba(156, 39, 176, 0.05)',
+                borderRadius: '4px',
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  display: 'block',
+                  color: 'secondary.main',
+                  fontWeight: 500,
+                  mb: 0.5
+                }}
+              >
+                Thinking
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  whiteSpace: 'pre-wrap',
+                  color: 'text.secondary',
+                  fontSize: '0.9em',
+                  lineHeight: 1.4
+                }}
+              >
+                {message.thinkingContent}
+              </Typography>
+            </Box>
+          )}
+          
+          {/* Message content */}
+          <Typography 
+            ref={contentRef}
+            variant="body1" 
+            component="div"
+            sx={{
+              whiteSpace: 'pre-wrap',
+              lineHeight: 1.3,
+              position: 'relative',
+              minHeight: '24px',  // Ensure minimum height for empty content
+              '&::before': message.isLoading ? {
+                content: '"|"',
+                position: 'absolute',
+                left: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                animation: 'blink 1s step-end infinite',
+                color: 'primary.main',
+                fontSize: '1.2em',
+                lineHeight: 1,
+                height: '1em',
+              } : {},
+              pl: message.isLoading ? '12px' : 0,
+              '@keyframes blink': {
+                '0%, 100%': {
+                  opacity: 1,
+                },
+                '50%': {
+                  opacity: 0,
+                },
+              },
+              '& p': {
+                marginTop: 0.25,
+                marginBottom: 0.25,
+                lineHeight: 1.3,
+              },
+              '& p:first-of-type': {
+                marginTop: 0,
+              },
+              '& p:last-of-type': {
+                marginBottom: 0,
+              }
+            }}
+            dangerouslySetInnerHTML={{ __html: processedContent }}
+          />
+          
+          {/* Timestamp - always show */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+            <Typography 
+              variant="caption" 
+              sx={{ opacity: 0.7 }}
+            >
+              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Typography>
+          </Box>
         </Box>
       )}
     </Box>

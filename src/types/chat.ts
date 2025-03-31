@@ -9,6 +9,8 @@ export interface Message {
   isLoading?: boolean;
   provider?: ModelProvider;
   modelName?: string;
+  reasoningContent?: string;  // For DeepSeek
+  thinkingContent?: string;   // For Gemini
 }
 
 export interface ChatSession {

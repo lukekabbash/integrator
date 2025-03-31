@@ -70,13 +70,28 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  // Scroll to bottom whenever messages change or during loading
   useEffect(() => {
+    const scrollToBottom = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+
     scrollToBottom();
-  }, [messages]);
+
+    // Set up an interval during streaming to keep scrolling
+    let scrollInterval: NodeJS.Timeout | null = null;
+    if (isLoading) {
+      scrollInterval = setInterval(scrollToBottom, 100);
+    }
+
+    return () => {
+      if (scrollInterval) {
+        clearInterval(scrollInterval);
+      }
+    };
+  }, [messages, isLoading]);
 
   const handleEditMessage = (messageId: string, content: string, branch: boolean) => {
     // If branching, create a new session with the same content up to the selected message
@@ -109,12 +124,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   // When a message is updated directly in the bubble, we need to trigger a regeneration of the AI response
   const handleUpdateMessage = (messageId: string, newContent: string) => {
     if (onRegenerateFromMessage) {
-      // Use the regenerateFromMessage function to update and regenerate responses
       onRegenerateFromMessage(messageId, newContent);
     } else if (onUpdateMessage) {
-      // Fall back to just updating the message if regeneration is not available
       onUpdateMessage(messageId, newContent);
     }
+  };
+
+  // Function to scroll to bottom
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Handle sending messages and ensure scroll
+  const handleSendMessage = (message: string) => {
+    onSendMessage(message);
+    // Immediate scroll when sending
+    setTimeout(scrollToBottom, 50);
   };
 
   return (
@@ -211,7 +238,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           position: 'relative',
           overflow: 'hidden',
           mx: 'auto',
-          maxWidth: isMobile ? '100%' : '1200px',
+          maxWidth: isMobile ? '100%' : '800px',
           width: '100%',
           pl: isMobile ? 0 : 2,
           pr: isMobile ? 0 : 2,
@@ -231,6 +258,48 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             width: '100%',
           }}
         >
+          {/* Title bar with improved gradients */}
+          <Box
+            sx={{
+              position: 'relative',
+              width: '100%',
+              height: '48px',
+              display: { xs: 'none', sm: 'flex' },
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'transparent',
+            }}
+          >
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                bgcolor: '#202123',
+                borderRadius: '20px',
+                px: 4,
+                py: 1.5,
+                minWidth: 'auto',
+                maxWidth: '90%',
+              }}
+            >
+              <Typography 
+                variant="subtitle1" 
+                sx={{ 
+                  color: '#fff',
+                  fontWeight: 500,
+                  textAlign: 'center',
+                  opacity: 0.9,
+                  fontSize: '14px',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {activeSession?.title || 'New Chat'}
+              </Typography>
+            </Box>
+          </Box>
+
           {/* Messages container */}
           <Box
             ref={messagesEndRef}
@@ -244,7 +313,27 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               '& > *': {
                 mb: isMobile ? 1 : 2,
                 maxWidth: '100%',
-              }
+              },
+              '&::-webkit-scrollbar': {
+                width: '8px',
+                position: 'absolute',
+                right: 0,
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'transparent',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: '#4d4d4f',
+                borderRadius: '10px',
+                border: '2px solid transparent',
+                backgroundClip: 'content-box',
+              },
+              '&::-webkit-scrollbar-thumb:hover': {
+                background: '#666668',
+                borderRadius: '10px',
+                border: '2px solid transparent',
+                backgroundClip: 'content-box',
+              },
             }}
           >
             {messages.length === 0 ? (
@@ -292,19 +381,20 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                   <ChatBubble 
                     key={message.id}
                     message={message}
-                    isLatest={index === messages.length - 1}
+                    isLatest={index === messages.length - 1 && !isLoading}
                     onEditMessage={message.role === 'user' ? handleEditMessage : undefined}
                     onUpdateMessage={message.role === 'user' ? handleUpdateMessage : undefined}
                     isEditing={editingMessageId === message.id}
                   />
                 ))}
-                {isLoading && (
+                {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
                   <ChatBubble 
                     message={{ 
                       id: 'loading', 
                       role: 'model', 
-                      content: '...', 
-                      timestamp: new Date() 
+                      content: '', 
+                      timestamp: new Date(),
+                      isLoading: true
                     }} 
                     isLatest={true}
                   />
@@ -325,7 +415,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             }}
           >
             <ChatInput 
-              onSendMessage={onSendMessage}
+              onSendMessage={handleSendMessage}
               isLoading={isLoading}
               onClearChat={onClearChat}
               initialMessage={editMessageText}
