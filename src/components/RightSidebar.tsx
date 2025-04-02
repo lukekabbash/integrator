@@ -144,21 +144,40 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   };
 
   return (
-    <>
-      <Box 
-        sx={{ 
-          height: '100%',
-          width: isMobile ? '100%' : '300px',
-          bgcolor: 'background.paper',
-          borderLeft: 1,
-          borderColor: 'divider',
-          display: 'flex',
-          flexDirection: 'column',
-          overflowY: 'auto'
+    <Box
+      sx={{
+        width: { xs: '100%', sm: '320px' },
+        height: '100%',
+        borderLeft: 1,
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <Box
+        sx={{
+          flex: 1,
+          overflowY: 'auto',
+          p: 2,
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#4d4d4f',
+            borderRadius: '10px',
+            border: '2px solid transparent',
+            backgroundClip: 'padding-box',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: '#666668',
+          },
         }}
       >
         <Box sx={{ 
-          p: isMobile ? 1.5 : 3, 
           display: 'flex', 
           flexDirection: 'column', 
           gap: isMobile ? 3 : 4 
@@ -351,76 +370,37 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
               </FormHelperText>
             </Box>
           </Box>
-
-          <Divider sx={{ my: 2 }} />
-
-          {/* API Key Management */}
-          <Box>
-            <Button
-              variant="text"
-              startIcon={<KeyIcon />}
-              onClick={() => setIsApiKeyDialogOpen(true)}
-              fullWidth
-              size={isMobile ? "small" : "medium"}
-              sx={{
-                justifyContent: 'flex-start',
-                textTransform: 'none',
-                color: 'text.secondary',
-                py: 1
-              }}
-            >
-              Enter API Keys
-            </Button>
-          </Box>
         </Box>
       </Box>
 
-      {/* Edit/Add Prompt Modal */}
-      <Dialog 
-        open={editModalOpen} 
-        onClose={() => setEditModalOpen(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>{isNewPrompt ? 'Add System Prompt' : 'Edit System Prompt'}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Name"
-              fullWidth
-              value={editingPrompt?.name || ''}
-              onChange={(e) => setEditingPrompt(prev => prev ? { ...prev, name: e.target.value } : null)}
-              size={isMobile ? "small" : "medium"}
-            />
-            <TextField
-              label="Prompt"
-              fullWidth
-              multiline
-              rows={4}
-              value={editingPrompt?.prompt || ''}
-              onChange={(e) => setEditingPrompt(prev => prev ? { ...prev, prompt: e.target.value } : null)}
-              size={isMobile ? "small" : "medium"}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditModalOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleSavePrompt} 
-            variant="contained"
-            disabled={!editingPrompt?.name || !editingPrompt?.prompt}
-          >
-            {isNewPrompt ? 'Add' : 'Save'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* API Key section at bottom */}
+      <Box sx={{ 
+        borderTop: 1, 
+        borderColor: 'divider',
+        p: 2,
+        mt: 'auto'
+      }}>
+        <Button
+          fullWidth
+          startIcon={<KeyIcon />}
+          onClick={() => setIsApiKeyDialogOpen(true)}
+          sx={{
+            justifyContent: 'flex-start',
+            color: 'text.secondary',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.05)'
+            }
+          }}
+        >
+          Enter API Keys
+        </Button>
+      </Box>
 
-      {/* API Key Manager Dialog */}
       <ApiKeyManager
         open={isApiKeyDialogOpen}
         onClose={() => setIsApiKeyDialogOpen(false)}
       />
-    </>
+    </Box>
   );
 };
 

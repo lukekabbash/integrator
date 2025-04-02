@@ -1,17 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Paper, 
   IconButton, 
-  InputBase, 
   Box, 
-  useTheme, 
   CircularProgress,
-  Tooltip,
-  Badge,
   TextField
 } from '@mui/material';
-import SendIcon from '@mui/icons-material/Send';
-import EditIcon from '@mui/icons-material/Edit';
 import { motion } from 'framer-motion';
 
 interface ChatInputProps {
@@ -33,7 +26,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
 }) => {
   const [message, setMessage] = useState(initialMessage);
   const inputRef = useRef<HTMLInputElement>(null);
-  const theme = useTheme();
 
   // Update message state when initialMessage prop changes
   useEffect(() => {
