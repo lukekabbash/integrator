@@ -1,9 +1,13 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Message } from '../types/chat';
+import { getStoredApiKey } from '../hooks/useApiKeys';
 
-// Initialize the Gemini API client
-const API_KEY = process.env.REACT_APP_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(API_KEY as string);
+// Initialize the Gemini API client with stored API key
+const getGeminiClient = () => {
+  const apiKey = getStoredApiKey('google');
+  if (!apiKey) throw new Error('Google AI API key not found');
+  return new GoogleGenerativeAI(apiKey);
+};
 
 // Default model name
 const DEFAULT_MODEL = 'gemini-2.0-flash';
@@ -47,6 +51,7 @@ export const initChat = async (
   modelName: string = DEFAULT_MODEL, 
   systemPrompt?: string
 ) => {
+  const genAI = getGeminiClient();
   const model = genAI.getGenerativeModel({ model: modelName });
   const config = getGenerationConfig(modelName);
   
@@ -95,59 +100,56 @@ export const generateResponse = async (
 };
 
 export const generateStreamingResponse = async (
-  messages: Message[],
+  messages: Message[], 
   onChunk: (chunk: string) => void,
-  modelName: string = DEFAULT_MODEL,
-  systemPrompt?: string
-): Promise<string> => {
+  modelName: string,
+  systemPrompt?: string,
+  options?: {
+    temperature?: number;
+    maxOutputTokens?: number;
+  }
+) => {
   try {
-    const chat = await initChat(modelName, systemPrompt);
+    const { temperature = 0.7, maxOutputTokens = 2048 } = options || {};
     
-    // Format messages for the Gemini API (all except the latest)
-    for (const message of messages.slice(0, -1)) {
-      if (message.role === 'user') {
-        await chat.sendMessage(message.content);
-      }
+    // Convert messages to Gemini format
+    const geminiMessages = messages.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }],
+    }));
+
+    // Add system prompt if provided
+    if (systemPrompt) {
+      geminiMessages.unshift({
+        role: 'user',
+        parts: [{ text: `System: ${systemPrompt}` }],
+      });
     }
 
-    // Generate streaming response for the latest user message
-    const latestUserMessage = messages.filter(msg => msg.role === 'user').pop();
-    
-    if (!latestUserMessage) {
-      throw new Error('No user message found');
-    }
+    // Initialize Gemini chat
+    const chat = getGeminiClient().getGenerativeModel({ model: modelName }).startChat({
+      generationConfig: {
+        temperature,
+        maxOutputTokens,
+        topP: 0.8,
+        topK: 40,
+      },
+      history: geminiMessages,
+    });
 
-    // Get streaming response with direct chunk delivery
-    const streamingResponse = await chat.sendMessageStream(latestUserMessage.content);
+    // Generate response with streaming
+    const result = await chat.sendMessageStream(geminiMessages[geminiMessages.length - 1].parts[0].text);
+    
     let fullResponse = '';
-    
-    // Process the stream chunks and deliver directly to UI
-    for await (const chunk of streamingResponse.stream) {
+    for await (const chunk of result.stream) {
       const chunkText = chunk.text();
-      if (chunkText.trim()) {
-        fullResponse += chunkText;
-        // Send each chunk directly to UI without buffering
-        onChunk(chunkText);
-      }
+      fullResponse += chunkText;
+      onChunk(chunkText);
     }
     
     return fullResponse;
   } catch (error) {
-    console.error('Error generating streaming response:', error);
-    
-    // More detailed error handling
-    if (error instanceof Error) {
-      console.error('Error details:', error.message);
-      if (error.message.includes('system_instruction')) {
-        console.error('System instruction error detected. Attempting without system prompt...');
-        
-        // Try again without system prompt
-        if (systemPrompt) {
-          return generateStreamingResponse(messages, onChunk, modelName, undefined);
-        }
-      }
-    }
-    
+    console.error('Error in Gemini streaming response:', error);
     throw error;
   }
 };
@@ -155,7 +157,7 @@ export const generateStreamingResponse = async (
 // Enhanced function to check if model is available and supports streaming
 export const checkModelAvailability = async (modelName: string): Promise<{available: boolean, supportsStreaming: boolean}> => {
   try {
-    const model = genAI.getGenerativeModel({ model: modelName });
+    const model = getGeminiClient().getGenerativeModel({ model: modelName });
     // Try a simple test prompt
     await model.generateContent('Test prompt to check if the model is available.');
     
@@ -175,7 +177,7 @@ export const getContentStream = async (
   systemPrompt?: string
 ): Promise<string> => {
   try {
-    const model = genAI.getGenerativeModel({ model: modelName });
+    const model = getGeminiClient().getGenerativeModel({ model: modelName });
     const config = getGenerationConfig(modelName);
     
     // Create content generation config

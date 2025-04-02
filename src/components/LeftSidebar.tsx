@@ -198,6 +198,8 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
           ))
         )}
       </List>
+
+      <Divider />
     </Box>
   );
 };

@@ -6,13 +6,12 @@ import {
   useTheme, 
   useMediaQuery,
   IconButton,
-  Drawer,
-  Stack
+  Drawer
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CloseIcon from '@mui/icons-material/Close';
-import { Message, ChatSession, ModelProvider } from '../types/chat';
+import { Message, ChatSession, ModelProvider, SystemPrompt } from '../types/chat';
 import ChatBubble from './ChatBubble';
 import ChatInput from './ChatInput';
 import LeftSidebar from './LeftSidebar';
@@ -27,6 +26,9 @@ interface ChatWindowProps {
   modelName: string;
   provider: ModelProvider;
   systemPrompt: string;
+  temperature: number;
+  maxOutputTokens: number;
+  systemPrompts: SystemPrompt[];
   onSendMessage: (message: string) => void;
   onClearChat: () => void;
   onModelChange: (modelId: string) => void;
@@ -35,9 +37,12 @@ interface ChatWindowProps {
   onNewChat: () => void;
   onDeleteChat: (sessionId: string) => void;
   onSystemPromptChange: (prompt: string) => void;
+  onSystemPromptsChange: (prompts: SystemPrompt[]) => void;
   onBranchSession: (sessionId: string, messageId: string) => ChatSession | null;
   onUpdateMessage?: (messageId: string, content: string) => void;
   onRegenerateFromMessage?: (messageId: string, content: string) => void;
+  onTemperatureChange: (value: number) => void;
+  onMaxOutputTokensChange: (value: number) => void;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -49,6 +54,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   modelName,
   provider,
   systemPrompt,
+  temperature,
+  maxOutputTokens,
+  systemPrompts,
   onSendMessage,
   onClearChat,
   onModelChange,
@@ -57,9 +65,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onNewChat,
   onDeleteChat,
   onSystemPromptChange,
+  onSystemPromptsChange,
   onBranchSession,
   onUpdateMessage,
-  onRegenerateFromMessage
+  onRegenerateFromMessage,
+  onTemperatureChange,
+  onMaxOutputTokensChange
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -238,10 +249,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           position: 'relative',
           overflow: 'hidden',
           mx: 'auto',
-          maxWidth: isMobile ? '100%' : '800px',
+          maxWidth: isMobile ? '100%' : '875px',
           width: '100%',
           pl: isMobile ? 0 : 2,
-          pr: isMobile ? 0 : 2,
+          pr: 0,
           pt: isMobile ? '56px' : 0,
         }}
       >
@@ -256,6 +267,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             position: 'relative',
             overflow: 'hidden',
             width: '100%',
+            '&::-webkit-scrollbar': {
+              display: 'none', // Hide default scrollbar
+            },
           }}
         >
           {/* Title bar with improved gradients */}
@@ -300,107 +314,128 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             </Box>
           </Box>
 
-          {/* Messages container */}
+          {/* Messages container - without scrollbar styling */}
           <Box
-            ref={messagesEndRef}
             sx={{
               flexGrow: 1,
-              overflowY: 'auto',
+              position: 'relative',
+              width: '100%',
               overflowX: 'hidden',
-              px: { xs: 1, sm: 2 },
-              py: 2,
-              scrollBehavior: 'smooth',
-              '& > *': {
-                mb: isMobile ? 1 : 2,
-                maxWidth: '100%',
-              },
-              '&::-webkit-scrollbar': {
-                width: '8px',
-                position: 'absolute',
-                right: 0,
-              },
-              '&::-webkit-scrollbar-track': {
-                background: 'transparent',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: '#4d4d4f',
-                borderRadius: '10px',
-                border: '2px solid transparent',
-                backgroundClip: 'content-box',
-              },
-              '&::-webkit-scrollbar-thumb:hover': {
-                background: '#666668',
-                borderRadius: '10px',
-                border: '2px solid transparent',
-                backgroundClip: 'content-box',
-              },
+              overflowY: 'hidden', // Hide native scrollbar
             }}
           >
-            {messages.length === 0 ? (
-              <Box
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  opacity: 0.7,
-                  gap: isMobile ? 1 : 2,
-                }}
-              >
-                <Box>
-                  <Box
-                    component="img"
-                    src="/INT LOGO2.png"
-                    alt="AI Integrator Logo"
-                    sx={{ 
-                      width: isMobile ? '80px' : '120px',
-                      height: 'auto',
-                      opacity: 0.7
-                    }}
-                  />
-                </Box>
-                <Typography variant="body1" color="text.secondary">
-                  Start a conversation with AI Integrator
-                </Typography>
-                <Typography 
-                  variant="body2" 
-                  color="text.secondary" 
-                  sx={{ 
-                    maxWidth: '80%', 
-                    textAlign: 'center',
-                    fontSize: isMobile ? '0.875rem' : '1rem'
+            {/* Custom scrollable container with scrollbar on the far right */}
+            <Box
+              ref={messagesEndRef}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                overflowY: 'scroll',
+                overflowX: 'hidden',
+                px: { xs: 1, sm: 2 },
+                py: 2,
+                scrollBehavior: 'smooth',
+                '& > *': {
+                  mb: isMobile ? 1 : 2,
+                  maxWidth: '100%',
+                },
+                // Custom scrollbar positioning at the right edge
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                  position: 'absolute',
+                  right: 0,
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: 'transparent',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: '#4d4d4f',
+                  borderRadius: '10px 0 0 10px',
+                  border: 0,
+                  backgroundClip: 'padding-box',
+                },
+                '&::-webkit-scrollbar-thumb:hover': {
+                  background: '#666668',
+                  borderRadius: '10px 0 0 10px',
+                  border: 0,
+                  backgroundClip: 'padding-box',
+                },
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#4d4d4f transparent',
+                // Ensure content doesn't go under scrollbar
+                paddingRight: '16px',
+                boxSizing: 'content-box',
+              }}
+            >
+              {messages.length === 0 ? (
+                <Box
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    opacity: 0.7,
+                    gap: isMobile ? 1 : 2,
                   }}
                 >
-                  Your models, your way.
-                </Typography>
-              </Box>
-            ) : (
-              <>
-                {messages.map((message, index) => (
-                  <ChatBubble 
-                    key={message.id}
-                    message={message}
-                    isLatest={index === messages.length - 1 && !isLoading}
-                    onEditMessage={message.role === 'user' ? handleEditMessage : undefined}
-                    onUpdateMessage={message.role === 'user' ? handleUpdateMessage : undefined}
-                    isEditing={editingMessageId === message.id}
-                  />
-                ))}
-                {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
-                  <ChatBubble 
-                    message={{ 
-                      id: 'loading', 
-                      role: 'model', 
-                      content: '', 
-                      timestamp: new Date(),
-                      isLoading: true
-                    }} 
-                    isLatest={true}
-                  />
-                )}
-              </>
-            )}
+                  <Box>
+                    <Box
+                      component="img"
+                      src="/INT LOGO2.png"
+                      alt="AI Integrator Logo"
+                      sx={{ 
+                        width: isMobile ? '80px' : '120px',
+                        height: 'auto',
+                        opacity: 0.7
+                      }}
+                    />
+                  </Box>
+                  <Typography variant="body1" color="text.secondary">
+                    Start a conversation with AI Integrator
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    sx={{ 
+                      maxWidth: '80%', 
+                      textAlign: 'center',
+                      fontSize: isMobile ? '0.875rem' : '1rem'
+                    }}
+                  >
+                    Your models, your way.
+                  </Typography>
+                </Box>
+              ) : (
+                <>
+                  {messages.map((message, index) => (
+                    <ChatBubble 
+                      key={message.id}
+                      message={message}
+                      isLatest={index === messages.length - 1 && !isLoading}
+                      onEditMessage={message.role === 'user' ? handleEditMessage : undefined}
+                      onUpdateMessage={message.role === 'user' ? handleUpdateMessage : undefined}
+                      isEditing={editingMessageId === message.id}
+                    />
+                  ))}
+                  {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
+                    <ChatBubble 
+                      message={{ 
+                        id: 'loading', 
+                        role: 'model', 
+                        content: '', 
+                        timestamp: new Date(),
+                        isLoading: true
+                      }} 
+                      isLatest={true}
+                    />
+                  )}
+                </>
+              )}
+            </Box>
           </Box>
 
           {/* Input area */}
@@ -431,8 +466,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           anchor="right"
           open={rightSidebarOpen}
           onClose={() => setRightSidebarOpen(false)}
-          PaperProps={{
-            sx: {
+          sx={{
+            '& .MuiDrawer-paper': {
               width: '100%',
               maxWidth: '320px',
               bgcolor: 'background.paper',
@@ -448,6 +483,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             modelName={modelName}
             provider={provider}
             systemPrompt={systemPrompt}
+            temperature={temperature}
+            maxOutputTokens={maxOutputTokens}
+            systemPrompts={systemPrompts}
             onModelChange={(model) => {
               onModelChange(model);
               setRightSidebarOpen(false);
@@ -456,7 +494,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               onSystemPromptChange(prompt);
               setRightSidebarOpen(false);
             }}
+            onSystemPromptsChange={onSystemPromptsChange}
             onProviderChange={onProviderChange}
+            onTemperatureChange={onTemperatureChange}
+            onMaxOutputTokensChange={onMaxOutputTokensChange}
           />
         </Drawer>
       ) : (
@@ -464,9 +505,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           modelName={modelName}
           provider={provider}
           systemPrompt={systemPrompt}
+          temperature={temperature}
+          maxOutputTokens={maxOutputTokens}
+          systemPrompts={systemPrompts}
           onModelChange={onModelChange}
           onSystemPromptChange={onSystemPromptChange}
+          onSystemPromptsChange={onSystemPromptsChange}
           onProviderChange={onProviderChange}
+          onTemperatureChange={onTemperatureChange}
+          onMaxOutputTokensChange={onMaxOutputTokensChange}
         />
       )}
     </Box>

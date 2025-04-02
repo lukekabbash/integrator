@@ -100,7 +100,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         position: 'sticky', 
         bottom: 0, 
         width: '100%',
-        pb: 2,
+        pb: { xs: 3, sm: 2 },
         pt: 1,
         '&::before': {
           content: '""',

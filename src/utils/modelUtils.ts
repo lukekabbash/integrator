@@ -1,18 +1,25 @@
 import { ModelProvider } from '../types/chat';
 
-// Models that support system prompts
-const SYSTEM_PROMPT_MODELS = [
-  'gpt-4o',
-  'gpt-4o-mini',
-  'grok-2',
-  'grok-2-vision',
-  'deepseek-chat',
-  'deepseek-reasoner'
-];
-
-// Check if a model supports system prompts
-export const supportsSystemPrompt = (modelName: string): boolean => {
-  return SYSTEM_PROMPT_MODELS.some(model => modelName.startsWith(model));
+// Check if the selected model supports system prompts
+export const supportsSystemPrompt = (modelName: string, provider: ModelProvider): boolean => {
+  // Models that don't support system prompts
+  const nonSupportedModels: string[] = [
+    // Gemini models that don't support system instructions
+    'gemini-1.5-flash-8b'
+  ];
+  
+  // Provider-specific checks
+  if (provider === 'google') {
+    return !nonSupportedModels.includes(modelName);
+  }
+  
+  // OpenAI, DeepSeek, and xAI models all support system prompts
+  if (['openai', 'deepseek', 'xai'].includes(provider)) {
+    return true;
+  }
+  
+  // Default to not supporting system prompts for unknown providers
+  return false;
 };
 
 // Get the base model name without version suffixes

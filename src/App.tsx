@@ -14,6 +14,8 @@ function App() {
     modelName,
     selectedProvider,
     systemPrompt,
+    temperature,
+    maxOutputTokens,
     sendMessage, 
     clearChat,
     changeModel,
@@ -24,7 +26,11 @@ function App() {
     updateSystemPrompt,
     branchSession,
     updateMessage,
-    regenerateFromMessage
+    regenerateFromMessage,
+    changeTemperature,
+    changeMaxOutputTokens,
+    systemPrompts,
+    updateSystemPrompts
   } = useChat();
 
   return (
@@ -47,6 +53,8 @@ function App() {
           modelName={modelName}
           provider={selectedProvider}
           systemPrompt={systemPrompt}
+          temperature={temperature}
+          maxOutputTokens={maxOutputTokens}
           onSendMessage={sendMessage}
           onClearChat={clearChat}
           onModelChange={changeModel}
@@ -58,6 +66,10 @@ function App() {
           onBranchSession={branchSession}
           onUpdateMessage={updateMessage}
           onRegenerateFromMessage={regenerateFromMessage}
+          onTemperatureChange={changeTemperature}
+          onMaxOutputTokensChange={changeMaxOutputTokens}
+          systemPrompts={systemPrompts}
+          onSystemPromptsChange={updateSystemPrompts}
         />
       </Box>
     </Layout>

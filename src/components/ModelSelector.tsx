@@ -1,6 +1,7 @@
 import React from 'react';
-import { Box, Select, MenuItem, FormControl, InputLabel, FormHelperText, SelectChangeEvent, Typography, Tooltip, Chip, useTheme } from '@mui/material';
+import { Box, Select, MenuItem, FormControl, InputLabel, FormHelperText, SelectChangeEvent, Typography, Tooltip, Chip, useTheme, Alert } from '@mui/material';
 import { ALL_MODELS, GEMINI_MODELS, OPENAI_MODELS, XAI_MODELS, DEEPSEEK_MODELS, ModelProvider } from '../types/chat';
+import useApiKeys from '../hooks/useApiKeys';
 
 interface ModelSelectorProps {
   selectedModel: string;
@@ -16,6 +17,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
   onProviderChange 
 }) => {
   const theme = useTheme();
+  const { checkApiKeyAvailability } = useApiKeys();
   
   const handleModelChange = (event: SelectChangeEvent) => {
     onModelChange(event.target.value);
@@ -93,6 +95,11 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
             </MenuItem>
           ))}
         </Select>
+        {!checkApiKeyAvailability(selectedProvider) && (
+          <FormHelperText error>
+            API key not set for {getProviderDisplayName(selectedProvider)}
+          </FormHelperText>
+        )}
       </FormControl>
 
       {/* Model Selector */}
@@ -111,6 +118,10 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
               alignItems: 'center',
               py: 1.2
             } 
+          }}
+          renderValue={(selected) => {
+            const model = availableModels.find(m => m.id === selected);
+            return model ? model.name : selected;
           }}
           MenuProps={{
             PaperProps: {
@@ -164,17 +175,17 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                     ))}
                   </Box>
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mt: 0.5 }}>
-                  {model.description}
-                </Typography>
               </Box>
             </MenuItem>
           ))}
         </Select>
-        <FormHelperText>
-          {availableModels.find(model => model.id === selectedModel)?.description || 'Select an AI model'}
-        </FormHelperText>
       </FormControl>
+
+      {!checkApiKeyAvailability(selectedProvider) && (
+        <Alert severity="warning" sx={{ mt: 1 }}>
+          Please set up your API key for {getProviderDisplayName(selectedProvider)} to use these models
+        </Alert>
+      )}
     </Box>
   );
 };

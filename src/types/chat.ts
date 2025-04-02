@@ -38,6 +38,11 @@ export interface Model {
   capabilities: string[];
 }
 
+export interface SystemPrompt {
+  name: string;
+  prompt: string;
+}
+
 // Gemini models
 export const GEMINI_MODELS: Model[] = [
   {

@@ -1,27 +1,37 @@
 import OpenAI from 'openai';
 import { Message } from '../types/chat';
 import { getBaseModelName, getModelConfig } from '../utils/modelUtils';
+import { getStoredApiKey } from '../hooks/useApiKeys';
 
 // Initialize the OpenAI client with provider-specific configuration
 const getOpenAIClient = (modelName: string) => {
   // Configure base URL and API key based on model provider
   if (modelName.startsWith('grok-')) {
+    const apiKey = getStoredApiKey('xai');
+    if (!apiKey) throw new Error('xAI API key not found');
+    
     return new OpenAI({
-      apiKey: process.env.REACT_APP_XAI_API_KEY as string,
+      apiKey: apiKey,
       baseURL: "https://api.x.ai/v1",
       dangerouslyAllowBrowser: true
     });
   } else if (modelName.startsWith('deepseek-')) {
+    const apiKey = getStoredApiKey('deepseek');
+    if (!apiKey) throw new Error('DeepSeek API key not found');
+    
     return new OpenAI({
-      apiKey: process.env.REACT_APP_DEEPSEEK_API_KEY as string,
+      apiKey: apiKey,
       baseURL: "https://api.deepseek.com/v1",
       dangerouslyAllowBrowser: true
     });
   }
 
   // Default OpenAI configuration
+  const apiKey = getStoredApiKey('openai');
+  if (!apiKey) throw new Error('OpenAI API key not found');
+  
   return new OpenAI({
-    apiKey: process.env.REACT_APP_OPENAI_API_KEY as string,
+    apiKey: apiKey,
     dangerouslyAllowBrowser: true
   });
 };
@@ -56,109 +66,51 @@ const formatMessagesForOpenAI = (messages: Message[], systemPrompt?: string): Ar
 export const generateOpenAIStreamingResponse = async (
   messages: Message[],
   onChunk: (chunk: string) => void,
-  modelName: string = DEFAULT_MODEL,
+  modelName: string,
   systemPrompt?: string,
-  streamingOptions?: { renderInterval?: number }
-): Promise<string> => {
+  options?: {
+    temperature?: number;
+    max_tokens?: number;
+  }
+) => {
   try {
-    const openai = getOpenAIClient(modelName);
-    const formattedMessages = formatMessagesForOpenAI(messages, systemPrompt);
-    const config = getModelConfig(modelName);
+    const { temperature = 0.7, max_tokens = 2048 } = options || {};
     
-    // Get the actual model name without version suffixes
-    const actualModelName = getBaseModelName(modelName);
-    
-    // Use custom render interval if provided, otherwise default to 5ms for super fast streaming
-    const RENDER_INTERVAL = streamingOptions?.renderInterval || 5;
-    console.log(`OpenAI streaming with render interval: ${RENDER_INTERVAL}ms, model: ${actualModelName}`);
-    
-    // For extremely fast streaming (5ms or less), use requestAnimationFrame for smooth rendering
-    const useAnimationFrame = RENDER_INTERVAL <= 5;
-    let animationFrameId: number | null = null;
-    let pendingChunks: string[] = [];
-    let bufferText = '';
-    let lastRenderTime = Date.now();
-    let fullResponse = '';
-    
-    if (useAnimationFrame) {
-      // Set up animation frame rendering for smoother UI updates
-      const renderPendingChunks = () => {
-        if (pendingChunks.length > 0) {
-          const text = pendingChunks.join('');
-          onChunk(text);
-          pendingChunks = [];
-        }
-        animationFrameId = requestAnimationFrame(renderPendingChunks);
-      };
-      animationFrameId = requestAnimationFrame(renderPendingChunks);
+    // Convert messages to OpenAI format with proper typing
+    const openaiMessages: OpenAI.ChatCompletionMessageParam[] = messages.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'assistant',
+      content: msg.content,
+    }));
+
+    // Add system prompt if provided
+    if (systemPrompt) {
+      openaiMessages.unshift({
+        role: 'system',
+        content: systemPrompt,
+      });
     }
 
-    // Create a streaming completion
-    const stream = await openai.chat.completions.create({
-      model: actualModelName,
-      messages: formattedMessages as OpenAI.ChatCompletionMessageParam[],
-      temperature: config.temperature,
-      top_p: config.top_p,
-      max_tokens: config.max_tokens,
+    // Make API request with streaming
+    const response = await getOpenAIClient(modelName).chat.completions.create({
+      model: modelName,
+      messages: openaiMessages,
+      temperature,
+      max_tokens,
       stream: true,
     });
-    
-    // Process each chunk of the stream
-    for await (const chunk of stream) {
+
+    let fullResponse = '';
+    for await (const chunk of response) {
       const content = chunk.choices[0]?.delta?.content || '';
-      
       if (content) {
         fullResponse += content;
-        
-        if (useAnimationFrame) {
-          // For animation frame based rendering, collect chunks to be rendered on next frame
-          pendingChunks.push(content);
-        } else {
-          // For interval based rendering
-          bufferText += content;
-          
-          // For fast streaming but not animation frame, update on each chunk
-          if (RENDER_INTERVAL <= 15) {
-            onChunk(content);
-          } else {
-            // For slower streaming, batch updates based on time interval
-            const currentTime = Date.now();
-            if (currentTime - lastRenderTime > RENDER_INTERVAL) {
-              if (bufferText) {
-                onChunk(bufferText);
-                bufferText = '';
-                lastRenderTime = currentTime;
-              }
-            }
-          }
-        }
+        onChunk(content);
       }
     }
-    
-    // Clean up animation frame if it was used
-    if (animationFrameId !== null) {
-      cancelAnimationFrame(animationFrameId);
-      
-      // Make sure any final pending chunks are rendered
-      if (pendingChunks.length > 0) {
-        const text = pendingChunks.join('');
-        onChunk(text);
-      }
-    }
-    
-    // Make sure to send any remaining buffered text for interval based rendering
-    if (!useAnimationFrame && bufferText) {
-      onChunk(bufferText);
-    }
-    
+
     return fullResponse;
   } catch (error) {
-    console.error('Error generating OpenAI streaming response:', error);
-    
-    if (error instanceof Error) {
-      console.error('Error details:', error.message);
-    }
-    
+    console.error('Error in OpenAI streaming response:', error);
     throw error;
   }
 };
@@ -172,7 +124,7 @@ export const checkOpenAIModelAvailability = async (modelName: string): Promise<{
     // Simple request to check if the model is available
     await getOpenAIClient(modelName).chat.completions.create({
       model: actualModelName,
-      messages: [{ role: 'user', content: 'Hello' }] as OpenAI.ChatCompletionMessageParam[],
+      messages: [{ role: 'user', content: 'Hello' }],
       max_tokens: 5
     });
     
