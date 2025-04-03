@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Paper, Typography, Avatar, Box, Skeleton, IconButton, Tooltip, Menu, MenuItem, TextField, Button } from '@mui/material';
+import { Paper, Typography, Avatar, Box, Skeleton, IconButton, Tooltip, Menu, MenuItem, TextField, Button, Theme } from '@mui/material';
 import { Message } from '../types/chat';
 import { processText } from '../utils/textFormatting';
 import DOMPurify from 'dompurify';
@@ -207,111 +207,119 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
       sx={{
         display: 'flex',
         flexDirection: isUser ? 'row-reverse' : 'row',
-        gap: 2,
+        gap: { xs: 1, sm: 2 },
         mb: 2,
         maxWidth: '100%',
+        width: '100%',
+        boxSizing: 'border-box',
+        px: { xs: 1, sm: 0 },
       }}
     >
       <Avatar 
         src={isUser ? '/Headshot.PNG' : '/INT LOGO.png'} 
         sx={{ 
           boxShadow: 2,
-          width: 40,
-          height: 40,
-          bgcolor: message.isLoading ? 'transparent' : undefined
+          width: { xs: 32, sm: 40 },
+          height: { xs: 32, sm: 40 },
+          bgcolor: message.isLoading ? 'transparent' : undefined,
+          display: { xs: 'none', sm: 'block' }
         }}
       />
       
       {isUser ? (
         // User message - in a box
-        <Paper
-          elevation={2}
-          sx={{
-            p: 2,
-            maxWidth: isEditing ? '95%' : '80%',
-            bgcolor: isEditing ? 'background.paper' : 'primary.light',
-            color: isEditing ? 'text.primary' : 'primary.contrastText',
-            borderRadius: '12px',
-            position: 'relative',
-            borderTopRightRadius: '4px',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              right: -6,
-              top: 0,
-              borderTop: '8px solid transparent',
-              borderLeft: `8px solid ${isEditing ? 'background.paper' : 'primary.light'}`,
-              borderBottom: '8px solid transparent',
-            },
-            '& code': {
-              backgroundColor: 'rgba(0, 0, 0, 0.1)',
-              padding: '0.1em 0.3em',
-              borderRadius: '3px',
-              fontFamily: '"Consolas", "Monaco", monospace',
-            },
-            '& pre': {
-              backgroundColor: 'rgba(0, 0, 0, 0.2)',
-              padding: '0.5em',
-              borderRadius: '4px',
-              overflowX: 'auto', 
-              fontFamily: '"Consolas", "Monaco", monospace',
-            },
-            transition: 'all 0.2s ease-in-out',
-            border: isEditing ? '2px solid' : 'none',
-            borderColor: isEditing ? 'rgba(150, 150, 150, 0.5)' : 'transparent'
-          }}
-        >
-          {message.isLoading ? (
-            <Box sx={{ width: '100%' }}>
-              <Skeleton variant="text" width="80%" />
-              <Skeleton variant="text" width="60%" />
-              <Skeleton variant="text" width="40%" />
-            </Box>
-          ) : isEditing ? (
-            // Editing mode
-            <Box sx={{ width: '100%' }}>
-              <TextField
-                fullWidth
-                multiline
-                minRows={3}
-                maxRows={15}
-                value={editedContent}
-                onChange={(e) => setEditedContent(e.target.value)}
-                onKeyDown={handleKeyPress}
-                autoFocus
-                variant="outlined"
-                sx={{ 
-                  mb: 2,
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: 'rgba(50, 50, 50, 0.06)'
-                  }
-                }}
-              />
-              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
-                <Button 
-                  variant="outlined" 
-                  size="small" 
-                  startIcon={<CancelIcon />}
-                  onClick={handleCancelEdit}
-                  color="inherit"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  variant="contained" 
-                  size="small" 
-                  startIcon={<SendIcon />}
-                  onClick={handleSaveEdit}
-                  color="primary"
-                  disabled={!editedContent.trim()}
-                  sx={{ bgcolor: 'grey.700', '&:hover': { bgcolor: 'grey.800' } }}
-                >
-                  Resend
-                </Button>
+        <Box sx={{ 
+          maxWidth: isEditing ? '95%' : { xs: '85%', sm: '80%' },
+          width: 'fit-content',
+          boxSizing: 'border-box',
+          ml: { xs: 0, sm: 2 },
+        }}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 1.5,
+              bgcolor: isEditing ? 'background.paper' : 'secondary.main',
+              color: isEditing ? 'text.primary' : 'text.primary',
+              borderRadius: '12px',
+              position: 'relative',
+              borderTopRightRadius: '4px',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                right: -6,
+                top: 0,
+                borderTop: '8px solid transparent',
+                borderLeft: `8px solid ${isEditing ? (theme: Theme) => theme.palette.background.paper : (theme: Theme) => theme.palette.secondary.main}`,
+                borderBottom: '8px solid transparent',
+              },
+              '& code': {
+                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                padding: '0.1em 0.3em',
+                borderRadius: '3px',
+                fontFamily: '"Consolas", "Monaco", monospace',
+              },
+              '& pre': {
+                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                padding: '0.5em',
+                borderRadius: '4px',
+                overflowX: 'auto', 
+                fontFamily: '"Consolas", "Monaco", monospace',
+              },
+              transition: 'all 0.2s ease-in-out',
+              border: isEditing ? '2px solid' : 'none',
+              borderColor: isEditing ? 'rgba(150, 150, 150, 0.5)' : 'transparent'
+            }}
+          >
+            {message.isLoading ? (
+              <Box sx={{ width: '100%' }}>
+                <Skeleton variant="text" width="80%" />
+                <Skeleton variant="text" width="60%" />
+                <Skeleton variant="text" width="40%" />
               </Box>
-            </Box>
-          ) : (
-            <>
+            ) : isEditing ? (
+              // Editing mode
+              <Box sx={{ width: '100%' }}>
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  maxRows={15}
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  autoFocus
+                  variant="outlined"
+                  sx={{ 
+                    mb: 2,
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'rgba(50, 50, 50, 0.06)'
+                    }
+                  }}
+                />
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+                  <Button 
+                    variant="outlined" 
+                    size="small" 
+                    startIcon={<CancelIcon />}
+                    onClick={handleCancelEdit}
+                    color="inherit"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    variant="contained" 
+                    size="small" 
+                    startIcon={<SendIcon />}
+                    onClick={handleSaveEdit}
+                    color="primary"
+                    disabled={!editedContent.trim()}
+                    sx={{ bgcolor: 'grey.700', '&:hover': { bgcolor: 'grey.800' } }}
+                  >
+                    Resend
+                  </Button>
+                </Box>
+              </Box>
+            ) : (
               <Typography 
                 ref={contentRef}
                 variant="body1" 
@@ -320,28 +328,7 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
                   whiteSpace: 'pre-wrap',
                   lineHeight: 1.3,
                   position: 'relative',
-                  minHeight: '24px',  // Ensure minimum height for empty content
-                  '&::before': message.isLoading ? {
-                    content: '"|"',
-                    position: 'absolute',
-                    left: 0,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    animation: 'blink 1s step-end infinite',
-                    color: 'primary.main',
-                    fontSize: '1.2em',
-                    lineHeight: 1,
-                    height: '1em',
-                  } : {},
-                  pl: message.isLoading ? '12px' : 0,
-                  '@keyframes blink': {
-                    '0%, 100%': {
-                      opacity: 1,
-                    },
-                    '50%': {
-                      opacity: 0,
-                    },
-                  },
+                  minHeight: '24px',
                   '& p': {
                     marginTop: 0.25,
                     marginBottom: 0.25,
@@ -356,67 +343,91 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
                 }}
                 dangerouslySetInnerHTML={{ __html: processedContent }}
               />
+            )}
+          </Paper>
+
+          {/* Timestamp and edit button below the bubble */}
+          {!isEditing && (
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                justifyContent: 'flex-end', 
+                alignItems: 'center', 
+                gap: 1,
+                mt: 0.5,
+                mr: 0.5,
+                opacity: 0.7
+              }}
+            >
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  fontSize: { xs: '0.65rem', sm: '0.75rem' }
+                }}
+              >
+                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Typography>
               
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-                <Typography 
-                  variant="caption" 
-                  sx={{ opacity: 0.7 }}
-                >
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Typography>
-                
-                {onEditMessage && (
-                  <Tooltip title="Edit message">
-                    <IconButton 
-                      size="small" 
-                      sx={{ opacity: 0.7, '&:hover': { opacity: 1 } }}
-                      onClick={handleOpenMenu}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                )}
-                
-                <Menu
-                  anchorEl={anchorEl}
-                  open={menuOpen}
-                  onClose={handleCloseMenu}
-                  PaperProps={{
-                    sx: {
-                      bgcolor: 'background.paper',
-                      borderRadius: 1,
-                      boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)',
-                    }
-                  }}
-                >
-                  <MenuItem onClick={handleEditMessage}>
-                    <EditIcon fontSize="small" sx={{ mr: 1, color: 'grey.500' }} />
-                    Edit Message
-                  </MenuItem>
-                  <MenuItem onClick={handleBranchMessage}>
-                    <CallSplitIcon fontSize="small" sx={{ mr: 1, color: 'grey.500' }} />
-                    Branch from Here
-                  </MenuItem>
-                </Menu>
-              </Box>
-            </>
+              {onEditMessage && (
+                <>
+                  <IconButton 
+                    size="small" 
+                    sx={{ 
+                      p: 0.5,
+                      '&:hover': { opacity: 1 },
+                      transform: { xs: 'translateY(-1px)', sm: 'none' }
+                    }}
+                    onClick={handleOpenMenu}
+                  >
+                    <EditIcon sx={{ 
+                      fontSize: { xs: '0.8rem', sm: '0.9rem' }
+                    }} />
+                  </IconButton>
+                  
+                  <Menu
+                    anchorEl={anchorEl}
+                    open={menuOpen}
+                    onClose={handleCloseMenu}
+                    PaperProps={{
+                      sx: {
+                        bgcolor: 'background.paper',
+                        borderRadius: 1,
+                        boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)',
+                      }
+                    }}
+                  >
+                    <MenuItem onClick={handleEditMessage}>
+                      <EditIcon fontSize="small" sx={{ mr: 1, color: 'grey.500' }} />
+                      Edit Message
+                    </MenuItem>
+                    <MenuItem onClick={handleBranchMessage}>
+                      <CallSplitIcon fontSize="small" sx={{ mr: 1, color: 'grey.500' }} />
+                      Branch from Here
+                    </MenuItem>
+                  </Menu>
+                </>
+              )}
+            </Box>
           )}
-        </Paper>
+        </Box>
       ) : (
         // AI message - no box, just text
         <Box
           sx={{
-            p: 2,
-            maxWidth: '80%',
+            p: { xs: 1, sm: 2 },
+            maxWidth: { xs: '85%', sm: '80%' },
             color: 'text.primary',
             display: 'flex',
             flexDirection: 'column',
             gap: 1.5,
+            mr: { xs: 0, sm: 2 },
             '& code': {
               backgroundColor: 'rgba(255, 255, 255, 0.1)',
               padding: '0.1em 0.3em',
               borderRadius: '3px',
               fontFamily: '"Consolas", "Monaco", monospace',
+              wordBreak: 'break-word',
+              whiteSpace: 'pre-wrap',
             },
             '& pre': {
               backgroundColor: 'rgba(50, 50, 50, 0.25)',
@@ -424,6 +435,11 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
               borderRadius: '4px',
               overflowX: 'auto',
               fontFamily: '"Consolas", "Monaco", monospace',
+              maxWidth: '100%',
+              '& code': {
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }
             }
           }}
         >
@@ -434,8 +450,10 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
               sx={{ 
                 display: 'block',
                 color: 'text.secondary',
-                fontSize: '0.75rem',
-                mb: 0.5
+                fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                mb: { xs: 0.25, sm: 0.5 },
+                lineHeight: { xs: 1.2, sm: 1.5 },
+                transform: { xs: 'translateY(8px)', sm: 'none' }
               }}
             >
               {formatProviderName(message.provider)} — {formatModelName(message.modelName)}
@@ -565,10 +583,20 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
           />
           
           {/* Timestamp - always show */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1, 
+            mt: { xs: 0.5, sm: 1 },
+            transform: { xs: 'translateY(-8px)', sm: 'none' }
+          }}>
             <Typography 
               variant="caption" 
-              sx={{ opacity: 0.7 }}
+              sx={{ 
+                opacity: 0.7,
+                fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                lineHeight: { xs: 1.2, sm: 1.5 }
+              }}
             >
               {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </Typography>

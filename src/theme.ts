@@ -2,48 +2,50 @@ import { createTheme, PaletteMode } from '@mui/material';
 
 // Create a theme instance
 export const createAppTheme = (mode: PaletteMode) => {
-  // Dark gray colors for UI
-  const darkGrey = '#212121';
-  const mediumGrey = '#333333';
-  const lightGrey = '#424242';
-  const white = '#ffffff';
-  const lightWhite = '#f3f4f6';
+  // OpenAI-inspired colors
+  const black = '#050505';  // Main background (darkest)
+  const sidebarBlack = '#1A1A1A';  // Sidebar background (lighter grey)
+  const mediumBlack = '#121212';  // Paper elements
+  const lightBlack = '#242424';  // Hover states
+  const white = '#FFFFFF';
+  const lightGray = '#C5C5C5';  // Secondary text
 
   return createTheme({
     palette: {
       mode: 'dark',
       primary: {
-        main: '#424242', // Darker tone
-        light: '#616161',
-        dark: '#212121',
-        contrastText: white,
+        main: white, // Changed from OpenAI green to white
+        light: 'rgba(255, 255, 255, 0.8)',
+        dark: 'rgba(255, 255, 255, 0.6)',
+        contrastText: black,
       },
       secondary: {
-        main: '#616161', // Dark gray
-        light: '#757575',
-        dark: '#424242',
+        main: '#1A1A1A', // Chat message background - matching sidebar
+        light: '#242424', // Slightly lighter for hover
+        dark: '#171717', // Slightly darker
         contrastText: white,
       },
       error: {
-        main: '#ef4444',
+        main: '#EF4444',
       },
       warning: {
-        main: '#f59e0b',
+        main: '#F59E0B',
       },
       info: {
-        main: '#3b82f6',
+        main: '#3B82F6',
       },
       success: {
-        main: '#10b981',
+        main: white, // Changed from OpenAI green to white
       },
       background: {
-        default: mediumGrey, // Middle section
-        paper: darkGrey, // Sidebars
+        default: black,
+        paper: sidebarBlack,
       },
       text: {
-        primary: white, // White text
-        secondary: lightWhite,
+        primary: white,
+        secondary: lightGray,
       },
+      divider: 'rgba(255,255,255,0.1)',
     },
     typography: {
       fontFamily: [
@@ -115,14 +117,14 @@ export const createAppTheme = (mode: PaletteMode) => {
               height: '8px',
             },
             '&::-webkit-scrollbar-track': {
-              background: darkGrey,
+              background: black,
             },
             '&::-webkit-scrollbar-thumb': {
-              backgroundColor: lightGrey,
+              backgroundColor: mediumBlack,
               borderRadius: '4px',
             },
             '&::-webkit-scrollbar-thumb:hover': {
-              background: '#616161',
+              background: lightBlack,
             },
           },
         },
@@ -144,6 +146,28 @@ export const createAppTheme = (mode: PaletteMode) => {
         styleOverrides: {
           root: {
             backgroundImage: 'none',
+          },
+        },
+      },
+      MuiSlider: {
+        styleOverrides: {
+          root: {
+            color: black,
+            '& .MuiSlider-rail': {
+              backgroundColor: black,
+            },
+            '& .MuiSlider-track': {
+              backgroundColor: black,
+            },
+            '& .MuiSlider-thumb': {
+              backgroundColor: white,
+              '&:hover, &.Mui-focusVisible': {
+                boxShadow: `0 0 0 8px rgba(255, 255, 255, 0.16)`,
+              },
+              '&.Mui-active': {
+                boxShadow: `0 0 0 12px rgba(255, 255, 255, 0.16)`,
+              },
+            },
           },
         },
       },

@@ -28,7 +28,7 @@ import { supportsSystemPrompt } from '../utils/modelUtils';
 import ModelSelector from './ModelSelector';
 import ApiKeyManager from './ApiKeyManager';
 
-interface SystemPrompt {
+export interface SystemPrompt {
   name: string;
   prompt: string;
 }
@@ -48,18 +48,30 @@ interface RightSidebarProps {
   onSystemPromptsChange?: (prompts: SystemPrompt[]) => void;
 }
 
-const DEFAULT_SYSTEM_PROMPTS: SystemPrompt[] = [
+export const DEFAULT_SYSTEM_PROMPTS: SystemPrompt[] = [
   {
     name: "Default Assistant",
     prompt: "You are a helpful, accurate, and friendly AI assistant. You provide detailed and thoughtful responses while being accurate and unbiased."
   },
   {
     name: "Code Expert",
-    prompt: "You are an expert programmer with deep knowledge of software development best practices, design patterns, and modern frameworks."
+    prompt: "You are an expert programmer with deep knowledge of software development best practices, design patterns, and modern frameworks. Provide clean, efficient code examples with explanations. Consider edge cases and performance optimizations in your solutions."
   },
   {
     name: "Creative Writer",
-    prompt: "You are a creative writing assistant skilled in storytelling, character development, and engaging narrative techniques."
+    prompt: "You are a creative writing assistant skilled in storytelling, character development, and engaging narrative techniques. Help craft vivid descriptions, compelling dialogue, and emotionally resonant stories across different genres and styles."
+  },
+  {
+    name: "Technical Explainer",
+    prompt: "You are a technical educator who excels at breaking down complex concepts into simple, understandable explanations. Use analogies, step-by-step reasoning, and visual descriptions to make difficult topics accessible to beginners while remaining technically accurate."
+  },
+  {
+    name: "Business Consultant",
+    prompt: "You are a strategic business consultant with expertise in market analysis, operational efficiency, and growth strategies. Provide actionable insights based on industry best practices, with practical recommendations that consider resource constraints and implementation challenges."
+  },
+  {
+    name: "Academic Research",
+    prompt: "You are a scholarly research assistant with knowledge across multiple academic disciplines. Provide well-structured, evidence-based responses with appropriate citations. Maintain academic rigor while explaining concepts clearly and highlighting different perspectives on complex topics."
   }
 ];
 
@@ -86,21 +98,37 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   const [isNewPrompt, setIsNewPrompt] = useState(false);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
   
+  // Find the current prompt in systemPrompts when component mounts or when systemPrompt changes
+  useEffect(() => {
+    const findPromptIndex = () => {
+      const index = systemPrompts.findIndex(p => p.prompt === systemPrompt);
+      if (index !== -1) {
+        setSelectedPromptIndex(index);
+      } else if (systemPrompts.length > 0 && systemPrompt) {
+        // If we can't find the exact match but have a systemPrompt, create a custom entry
+        const customPrompt = {
+          name: "Custom Prompt",
+          prompt: systemPrompt
+        };
+        
+        if (onSystemPromptsChange) {
+          const newPrompts = [...systemPrompts, customPrompt];
+          onSystemPromptsChange(newPrompts);
+          setSelectedPromptIndex(newPrompts.length - 1);
+        }
+      }
+    };
+    
+    findPromptIndex();
+  }, [systemPrompts, systemPrompt, onSystemPromptsChange]);
+  
   useEffect(() => {
     setShowSystemPromptWarning(!supportsSystemPrompt(modelName, provider));
   }, [modelName, provider]);
 
-  useEffect(() => {
-    // Find and set the selected prompt index based on the current systemPrompt
-    const index = systemPrompts.findIndex(p => p.prompt === systemPrompt);
-    if (index !== -1) {
-      setSelectedPromptIndex(index);
-    }
-  }, [systemPrompt, systemPrompts]);
-
   const handleEditPrompt = (index: number) => {
     setSelectedPromptIndex(index);
-    setEditingPrompt(systemPrompts[index]);
+    setEditingPrompt({...systemPrompts[index]});
     setIsNewPrompt(false);
     setEditModalOpen(true);
   };
@@ -112,28 +140,38 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   };
 
   const handleDeletePrompt = (index: number) => {
+    if (!onSystemPromptsChange) return;
+    
     const newPrompts = systemPrompts.filter((_, i) => i !== index);
-    onSystemPromptsChange?.(newPrompts);
+    onSystemPromptsChange(newPrompts);
+    
+    // If we deleted the selected prompt, select the first one
     if (index === selectedPromptIndex) {
-      // If we deleted the selected prompt, select the first one
       setSelectedPromptIndex(0);
-      onSystemPromptChange(newPrompts[0]?.prompt || '');
+      if (newPrompts.length > 0) {
+        onSystemPromptChange(newPrompts[0]?.prompt || '');
+      }
+    } else if (index < selectedPromptIndex) {
+      // Adjust the selected index if we deleted a prompt before it
+      setSelectedPromptIndex(selectedPromptIndex - 1);
     }
   };
 
   const handleSavePrompt = () => {
-    if (editingPrompt) {
-      let newPrompts: SystemPrompt[];
-      if (isNewPrompt) {
-        newPrompts = [...systemPrompts, editingPrompt];
-        setSelectedPromptIndex(newPrompts.length - 1);
-      } else {
-        newPrompts = [...systemPrompts];
-        newPrompts[selectedPromptIndex] = editingPrompt;
-      }
-      onSystemPromptsChange?.(newPrompts);
-      onSystemPromptChange(editingPrompt.prompt);
+    if (!editingPrompt || !onSystemPromptsChange) return;
+    
+    let newPrompts: SystemPrompt[];
+    
+    if (isNewPrompt) {
+      newPrompts = [...systemPrompts, editingPrompt];
+      setSelectedPromptIndex(newPrompts.length - 1);
+    } else {
+      newPrompts = [...systemPrompts];
+      newPrompts[selectedPromptIndex] = editingPrompt;
     }
+    
+    onSystemPromptsChange(newPrompts);
+    onSystemPromptChange(editingPrompt.prompt);
     setEditModalOpen(false);
   };
 
@@ -142,6 +180,43 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     if (value >= 0.7) return 'More creative';
     return 'Balanced';
   };
+
+  // System Prompt Edit Dialog
+  const renderEditDialog = () => (
+    <Dialog open={editModalOpen} onClose={() => setEditModalOpen(false)} maxWidth="sm" fullWidth>
+      <DialogTitle>
+        {isNewPrompt ? 'Add New System Prompt' : 'Edit System Prompt'}
+      </DialogTitle>
+      <DialogContent>
+        <TextField
+          label="Name"
+          fullWidth
+          margin="normal"
+          value={editingPrompt?.name || ''}
+          onChange={(e) => setEditingPrompt(prev => prev ? {...prev, name: e.target.value} : null)}
+        />
+        <TextField
+          label="Prompt"
+          fullWidth
+          margin="normal"
+          multiline
+          rows={6}
+          value={editingPrompt?.prompt || ''}
+          onChange={(e) => setEditingPrompt(prev => prev ? {...prev, prompt: e.target.value} : null)}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setEditModalOpen(false)}>Cancel</Button>
+        <Button 
+          onClick={handleSavePrompt}
+          disabled={!editingPrompt?.name || !editingPrompt?.prompt}
+          variant="contained"
+        >
+          Save
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
 
   return (
     <Box
@@ -167,13 +242,13 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             background: 'transparent',
           },
           '&::-webkit-scrollbar-thumb': {
-            background: '#4d4d4f',
+            background: '#444654',
             borderRadius: '10px',
             border: '2px solid transparent',
-            backgroundClip: 'padding-box',
+            backgroundClip: 'content-box',
           },
           '&::-webkit-scrollbar-thumb:hover': {
-            background: '#666668',
+            background: '#545567',
           },
         }}
       >
@@ -210,6 +285,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
                 size="small"
                 onClick={handleAddNewPrompt}
                 sx={{ ml: 1 }}
+                disabled={showSystemPromptWarning}
               >
                 <Add fontSize="small" />
               </IconButton>
@@ -230,7 +306,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
                   onSystemPromptChange(systemPrompts[index].prompt);
                 }}
                 size={isMobile ? "small" : "medium"}
-                disabled={showSystemPromptWarning}
+                disabled={showSystemPromptWarning || systemPrompts.length === 0}
               >
                 {systemPrompts.map((prompt, index) => (
                   <MenuItem 
@@ -250,50 +326,52 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             </FormControl>
 
             {/* Display selected prompt with actions */}
-            <Box sx={{ 
-              bgcolor: 'background.default',
-              p: 1.5,
-              borderRadius: 1,
-              position: 'relative'
-            }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  mb: 2,
-                  color: 'text.secondary',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  whiteSpace: 'pre-wrap'
-                }}
-              >
-                {systemPrompts[selectedPromptIndex]?.prompt || ''}
-              </Typography>
+            {systemPrompts.length > 0 && (
               <Box sx={{ 
-                display: 'flex', 
-                gap: 1, 
-                justifyContent: 'flex-end',
-                borderTop: 1,
-                borderColor: 'divider',
-                pt: 1
+                bgcolor: 'background.default',
+                p: 1.5,
+                borderRadius: 1,
+                position: 'relative'
               }}>
-                <IconButton
-                  size="small"
-                  onClick={() => handleEditPrompt(selectedPromptIndex)}
-                  disabled={showSystemPromptWarning}
+                <Typography
+                  variant="body2"
+                  sx={{
+                    mb: 2,
+                    color: 'text.secondary',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    whiteSpace: 'pre-wrap'
+                  }}
                 >
-                  <Edit fontSize="small" />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  onClick={() => handleDeletePrompt(selectedPromptIndex)}
-                  disabled={showSystemPromptWarning || systemPrompts.length <= 1}
-                >
-                  <Delete fontSize="small" />
-                </IconButton>
+                  {systemPrompts[selectedPromptIndex]?.prompt || ''}
+                </Typography>
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 1, 
+                  justifyContent: 'flex-end',
+                  borderTop: 1,
+                  borderColor: 'divider',
+                  pt: 1
+                }}>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleEditPrompt(selectedPromptIndex)}
+                    disabled={showSystemPromptWarning}
+                  >
+                    <Edit fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleDeletePrompt(selectedPromptIndex)}
+                    disabled={showSystemPromptWarning || systemPrompts.length <= 1}
+                  >
+                    <Delete fontSize="small" />
+                  </IconButton>
+                </Box>
               </Box>
-            </Box>
+            )}
           </Box>
 
           {/* Parameters Section */}
@@ -395,6 +473,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           Enter API Keys
         </Button>
       </Box>
+
+      {renderEditDialog()}
 
       <ApiKeyManager
         open={isApiKeyDialogOpen}

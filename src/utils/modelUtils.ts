@@ -4,12 +4,13 @@ import { ModelProvider } from '../types/chat';
 export const supportsSystemPrompt = (modelName: string, provider: ModelProvider): boolean => {
   // Models that don't support system prompts
   const nonSupportedModels: string[] = [
-    // Gemini models that don't support system instructions
+    // Legacy Gemini models that don't support system instructions
     'gemini-1.5-flash-8b'
   ];
   
   // Provider-specific checks
   if (provider === 'google') {
+    // Only check non-supported list for Google models
     return !nonSupportedModels.includes(modelName);
   }
   
@@ -18,8 +19,10 @@ export const supportsSystemPrompt = (modelName: string, provider: ModelProvider)
     return true;
   }
   
-  // Default to not supporting system prompts for unknown providers
-  return false;
+  console.log(`Checking system prompt support for ${provider}/${modelName}`);
+  
+  // Default to supporting system prompts to avoid false negatives
+  return true;
 };
 
 // Get the base model name without version suffixes

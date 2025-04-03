@@ -82,14 +82,25 @@ export const generateOpenAIStreamingResponse = async (
       content: msg.content,
     }));
 
-    // Add system prompt if provided
-    if (systemPrompt) {
-      openaiMessages.unshift({
-        role: 'system',
-        content: systemPrompt,
-      });
+    // Add system prompt if provided and not empty
+    if (systemPrompt && systemPrompt.trim()) {
+      // For models that don't support system messages, prepend to first user message
+      if (modelName.includes('grok') || modelName.includes('xai')) {
+        const firstUserMessage = openaiMessages.find(msg => msg.role === 'user');
+        if (firstUserMessage) {
+          firstUserMessage.content = `[System: ${systemPrompt}]\n\nUser: ${firstUserMessage.content}`;
+        }
+      } else {
+        // For models that support system messages, add as system message
+        openaiMessages.unshift({
+          role: 'system',
+          content: systemPrompt,
+        });
+      }
     }
 
+    console.log(`Sending request to ${modelName} with system prompt: ${systemPrompt ? 'Yes' : 'No'}`);
+    
     // Make API request with streaming
     const response = await getOpenAIClient(modelName).chat.completions.create({
       model: modelName,

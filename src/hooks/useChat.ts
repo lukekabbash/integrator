@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Message, ChatSession, MessageRole, ALL_MODELS, Model, ModelProvider, SystemPrompt } from '../types/chat';
-import { generateStreamingResponse, checkModelAvailability } from '../services/geminiService';
+import { Message, ChatSession, MessageRole, ALL_MODELS, Model, ModelProvider } from '../types/chat';
+import { generateStreamingResponse, checkModelAvailability, getContentStream } from '../services/geminiService';
 import { generateOpenAIStreamingResponse, checkOpenAIModelAvailability } from '../services/openaiService';
+import { DEFAULT_SYSTEM_PROMPTS } from '../components/RightSidebar';
 
 // Default system prompt
 const DEFAULT_SYSTEM_PROMPT = "You are a helpful, accurate, and friendly AI assistant. You provide detailed and thoughtful responses to user queries while striving to be as accurate and unbiased as possible. When you don't know something or aren't sure, you admit it clearly rather than making something up. You can assist with a wide range of tasks including answering questions, providing explanations, generating creative content, and more.";
@@ -13,9 +14,9 @@ const STORAGE_KEY_ACTIVE_SESSION = 'ai_active_session_id';
 const STORAGE_KEY_STREAMING = 'ai_streaming_enabled';
 const STORAGE_KEY_STREAMING_SPEED = 'ai_streaming_speed';
 const STORAGE_KEY_PROVIDER = 'ai_selected_provider';
-const STORAGE_KEY_TEMPERATURE = 'chat_temperature';
-const STORAGE_KEY_MAX_TOKENS = 'chat_max_tokens';
-const STORAGE_KEY_SYSTEM_PROMPTS = 'chat_system_prompts';
+const STORAGE_KEY_TEMPERATURE = 'ai_temperature';
+const STORAGE_KEY_MAX_TOKENS = 'ai_max_tokens';
+const STORAGE_KEY_SYSTEM_PROMPTS = 'ai_system_prompts';
 
 // Helper function to serialize dates properly when saving to localStorage
 const serializeSessions = (sessions: ChatSession[]): string => {
@@ -80,30 +81,35 @@ const STREAMING_SPEEDS = {
   VERY_FAST: 5,
 };
 
-// Default system prompts
-const DEFAULT_SYSTEM_PROMPTS: SystemPrompt[] = [
-  {
-    name: "Default Assistant",
-    prompt: "You are a helpful, accurate, and friendly AI assistant. You provide detailed and thoughtful responses while being accurate and unbiased."
-  },
-  {
-    name: "Code Expert",
-    prompt: "You are an expert programmer with deep knowledge of software development best practices, design patterns, and modern frameworks."
-  },
-  {
-    name: "Creative Writer",
-    prompt: "You are a creative writing assistant skilled in storytelling, character development, and engaging narrative techniques."
-  }
-];
-
-interface ModelCapability {
-  available: boolean;
-  supportsStreaming: boolean;
-}
-
 export const useChat = () => {
   const defaultModel = ALL_MODELS[0].id;
   const defaultProvider = getProviderFromModelId(defaultModel);
+  
+  // Load saved values from localStorage
+  const loadSavedTemperature = (): number => {
+    const saved = localStorage.getItem(STORAGE_KEY_TEMPERATURE);
+    return saved ? parseFloat(saved) : 0.7;
+  };
+
+  const loadSavedMaxTokens = (): number => {
+    const saved = localStorage.getItem(STORAGE_KEY_MAX_TOKENS);
+    return saved ? parseInt(saved, 10) : 2048;
+  };
+
+  const loadSavedSystemPrompts = (): any[] => {
+    const saved = localStorage.getItem(STORAGE_KEY_SYSTEM_PROMPTS);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Always include default prompts, then add any custom ones that aren't duplicates
+      const customPrompts = parsed.filter((customPrompt: any) => 
+        !DEFAULT_SYSTEM_PROMPTS.some(defaultPrompt => 
+          defaultPrompt.name === customPrompt.name && defaultPrompt.prompt === customPrompt.prompt
+        )
+      );
+      return [...DEFAULT_SYSTEM_PROMPTS, ...customPrompts];
+    }
+    return DEFAULT_SYSTEM_PROMPTS;
+  };
   
   // Load sessions from localStorage or use default
   const loadSavedSessions = (): ChatSession[] => {
@@ -156,40 +162,18 @@ export const useChat = () => {
     return savedSpeed !== null ? parseInt(savedSpeed, 10) : STREAMING_SPEEDS.VERY_FAST;
   };
   
-  // Load temperature preference from localStorage
-  const loadTemperaturePreference = (): number => {
-    const savedTemp = localStorage.getItem(STORAGE_KEY_TEMPERATURE);
-    return savedTemp !== null ? parseFloat(savedTemp) : 0.7;
-  };
-
-  // Load max tokens preference from localStorage
-  const loadMaxTokensPreference = (): number => {
-    const savedTokens = localStorage.getItem(STORAGE_KEY_MAX_TOKENS);
-    return savedTokens !== null ? parseInt(savedTokens, 10) : 2048;
-  };
-  
-  // Load system prompts from localStorage
-  const loadSavedSystemPrompts = (): SystemPrompt[] => {
-    const savedPrompts = localStorage.getItem(STORAGE_KEY_SYSTEM_PROMPTS);
-    return savedPrompts ? JSON.parse(savedPrompts) : DEFAULT_SYSTEM_PROMPTS;
-  };
-  
-  // State for model capabilities
-  const [modelCapabilities, setModelCapabilities] = useState<Record<string, ModelCapability>>({});
-  
-  // State for streaming
-  const [streamingEnabled, setStreamingEnabled] = useState<boolean>(loadStreamingPreference());
-  const [streamingSpeed, setStreamingSpeed] = useState<number>(loadStreamingSpeedPreference());
-  
-  // Other states
+  // State for multiple chat sessions
   const [sessions, setSessions] = useState<ChatSession[]>(loadSavedSessions);
   const [activeSessionId, setActiveSessionId] = useState<string>(loadSavedActiveSessionId(sessions));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [streamingEnabled, setStreamingEnabled] = useState<boolean>(loadStreamingPreference());
+  const [streamingSpeed, setStreamingSpeed] = useState<number>(loadStreamingSpeedPreference());
+  const [modelCapabilities, setModelCapabilities] = useState<Record<string, {available: boolean, supportsStreaming: boolean}>>({});
   const [selectedProvider, setSelectedProvider] = useState<ModelProvider>(loadSavedProvider());
-  const [temperature, setTemperature] = useState<number>(loadTemperaturePreference());
-  const [maxOutputTokens, setMaxOutputTokens] = useState<number>(loadMaxTokensPreference());
-  const [systemPrompts, setSystemPrompts] = useState<SystemPrompt[]>(loadSavedSystemPrompts());
+  const [temperature, setTemperature] = useState<number>(loadSavedTemperature());
+  const [maxOutputTokens, setMaxOutputTokens] = useState<number>(loadSavedMaxTokens());
+  const [systemPrompts, setSystemPrompts] = useState<any[]>(loadSavedSystemPrompts());
 
   // Find active session
   const activeSession = sessions.find(session => session.id === activeSessionId) || null;
@@ -219,17 +203,15 @@ export const useChat = () => {
     localStorage.setItem(STORAGE_KEY_PROVIDER, selectedProvider);
   }, [selectedProvider]);
 
-  // Save temperature to localStorage whenever it changes
+  // Save values to localStorage when they change
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_TEMPERATURE, String(temperature));
+    localStorage.setItem(STORAGE_KEY_TEMPERATURE, temperature.toString());
   }, [temperature]);
 
-  // Save max tokens to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_MAX_TOKENS, String(maxOutputTokens));
+    localStorage.setItem(STORAGE_KEY_MAX_TOKENS, maxOutputTokens.toString());
   }, [maxOutputTokens]);
 
-  // Save system prompts to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_SYSTEM_PROMPTS, JSON.stringify(systemPrompts));
   }, [systemPrompts]);
@@ -437,9 +419,9 @@ export const useChat = () => {
             onChunk, 
             modelName, 
             effectiveSystemPrompt,
-            {
+            { 
               temperature,
-              maxOutputTokens,
+              maxOutputTokens
             }
           );
         } else {
@@ -450,9 +432,9 @@ export const useChat = () => {
             (chunk) => { fullResponse += chunk; },
             modelName,
             effectiveSystemPrompt,
-            {
+            { 
               temperature,
-              maxOutputTokens,
+              maxOutputTokens
             }
           );
           return fullResponse;
@@ -466,7 +448,7 @@ export const useChat = () => {
           effectiveSystemPrompt,
           {
             temperature,
-            max_tokens: maxOutputTokens,
+            max_tokens: maxOutputTokens
           }
         );
       } else if (provider === 'xai') {
@@ -479,7 +461,7 @@ export const useChat = () => {
           effectiveSystemPrompt,
           {
             temperature,
-            max_tokens: maxOutputTokens,
+            max_tokens: maxOutputTokens
           }
         );
       } else {
@@ -529,12 +511,16 @@ export const useChat = () => {
       try {
         let fullResponse = '';
         
+        // Ensure we're using the current system prompt from the session
+        const currentSystemPrompt = activeSession.systemPrompt || DEFAULT_SYSTEM_PROMPT;
+        console.log(`Using system prompt: ${currentSystemPrompt ? currentSystemPrompt.substring(0, 20) + '...' : 'None'}`);
+        
         // Use streaming with direct updates
         await generateResponse(
           [...activeSession.messages, userMessage],
           activeSession.modelName,
           activeSession.provider,
-          activeSession.systemPrompt,
+          currentSystemPrompt,
           (chunk) => {
             fullResponse += chunk;
             // Immediately update UI - crucial for xAI streaming
@@ -588,7 +574,7 @@ export const useChat = () => {
         setIsLoading(false);
       }
     },
-    [activeSession, activeSessionId, addMessage, updateMessage, generateResponse]
+    [activeSession, activeSessionId, addMessage, updateMessage, generateResponse, DEFAULT_SYSTEM_PROMPT]
   );
 
   // Regenerate AI responses from a specific message onwards
@@ -716,7 +702,7 @@ export const useChat = () => {
 
   // Toggle streaming
   const toggleStreaming = useCallback(() => {
-    setStreamingEnabled((prev: boolean) => !prev);
+    setStreamingEnabled(prev => !prev);
   }, []);
   
   // Set streaming speed
@@ -740,18 +726,6 @@ export const useChat = () => {
     }
   }, [activeSessionId]);
 
-  const changeTemperature = (newTemp: number) => {
-    setTemperature(newTemp);
-  };
-
-  const changeMaxOutputTokens = (newTokens: number) => {
-    setMaxOutputTokens(newTokens);
-  };
-
-  const updateSystemPrompts = useCallback((prompts: SystemPrompt[]) => {
-    setSystemPrompts(prompts);
-  }, []);
-
   return {
     sessions,
     activeSession,
@@ -765,6 +739,7 @@ export const useChat = () => {
     selectedProvider,
     temperature,
     maxOutputTokens,
+    systemPrompts,
     sendMessage,
     clearChat: () => {
       setSessions(prev =>
@@ -810,10 +785,15 @@ export const useChat = () => {
     updateMessage,
     regenerateFromMessage,
     changeProvider,
-    changeTemperature,
-    changeMaxOutputTokens,
-    systemPrompts,
-    updateSystemPrompts,
+    changeTemperature: (temp: number) => {
+      setTemperature(temp);
+    },
+    changeMaxOutputTokens: (tokens: number) => {
+      setMaxOutputTokens(tokens);
+    },
+    updateSystemPrompts: (prompts: any[]) => {
+      setSystemPrompts(prompts);
+    }
   };
 };
 

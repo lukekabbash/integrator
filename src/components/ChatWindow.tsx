@@ -80,6 +80,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const [editMessageText, setEditMessageText] = useState<string>('');
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [inputHeight, setInputHeight] = useState(0);
 
   // Scroll to bottom whenever messages change or during loading
   useEffect(() => {
@@ -155,6 +156,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     setTimeout(scrollToBottom, 50);
   };
 
+  const handleInputHeightChange = (height: number) => {
+    setInputHeight(height);
+  };
+
   return (
     <Box
       sx={{
@@ -174,14 +179,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             left: 0,
             right: 0,
             height: '56px',
-            bgcolor: 'background.paper',
+            bgcolor: 'background.default',
             zIndex: 1200,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             px: 2,
-            borderBottom: 1,
-            borderColor: 'divider',
+            borderBottom: 0,
           }}
         >
           <IconButton onClick={() => setLeftSidebarOpen(true)} size="small">
@@ -243,7 +247,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       <Box
         sx={{ 
           flexGrow: 1, 
-          height: '100vh',
+          height: isMobile ? 'calc(100vh - 56px)' : '100vh',
           display: 'flex', 
           flexDirection: 'column',
           position: 'relative',
@@ -251,7 +255,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           mx: 'auto',
           maxWidth: isMobile ? '100%' : '875px',
           width: '100%',
-          pl: isMobile ? 0 : 2,
+          pl: 0,
           pr: 0,
           pt: isMobile ? '56px' : 0,
         }}
@@ -267,9 +271,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             position: 'relative',
             overflow: 'hidden',
             width: '100%',
-            '&::-webkit-scrollbar': {
-              display: 'none', // Hide default scrollbar
-            },
+            maxWidth: '100%',
+            boxSizing: 'border-box',
           }}
         >
           {/* Title bar with improved gradients */}
@@ -314,62 +317,49 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             </Box>
           </Box>
 
-          {/* Messages container - without scrollbar styling */}
+          {/* Messages container */}
           <Box
+            ref={messagesEndRef}
             sx={{
               flexGrow: 1,
+              overflow: 'auto',
               position: 'relative',
-              width: '100%',
-              overflowX: 'hidden',
-              overflowY: 'hidden', // Hide native scrollbar
+              pb: isMobile ? '80px' : 0, // Fixed padding for mobile input
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#444654 transparent',
+              overscrollBehavior: 'contain',
+              WebkitOverflowScrolling: 'touch',
+              height: '100%',
+              maxHeight: '100%',
+              '&::-webkit-scrollbar': {
+                width: '8px',
+                position: 'absolute',
+                right: 0,
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'transparent',
+                border: 'none',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: '#444654',
+                borderRadius: '10px',
+                border: '2px solid transparent',
+                backgroundClip: 'content-box',
+                '&:hover': {
+                  background: '#545567',
+                },
+              },
+              boxSizing: 'border-box',
             }}
           >
-            {/* Custom scrollable container with scrollbar on the far right */}
-            <Box
-              ref={messagesEndRef}
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                overflowY: 'scroll',
-                overflowX: 'hidden',
-                px: { xs: 1, sm: 2 },
-                py: 2,
-                scrollBehavior: 'smooth',
-                '& > *': {
-                  mb: isMobile ? 1 : 2,
-                  maxWidth: '100%',
-                },
-                // Custom scrollbar positioning at the right edge
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                  position: 'absolute',
-                  right: 0,
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: 'transparent',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: '#4d4d4f',
-                  borderRadius: '10px 0 0 10px',
-                  border: 0,
-                  backgroundClip: 'padding-box',
-                },
-                '&::-webkit-scrollbar-thumb:hover': {
-                  background: '#666668',
-                  borderRadius: '10px 0 0 10px',
-                  border: 0,
-                  backgroundClip: 'padding-box',
-                },
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#4d4d4f transparent',
-                // Ensure content doesn't go under scrollbar
-                paddingRight: '16px',
-                boxSizing: 'content-box',
-              }}
-            >
+            <Box sx={{ 
+              px: { xs: 1, sm: 4 },
+              py: 2, 
+              position: 'relative',
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box',
+            }}>
               {messages.length === 0 ? (
                 <Box
                   sx={{
@@ -455,6 +445,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               onClearChat={onClearChat}
               initialMessage={editMessageText}
               isEditing={isEditing}
+              onHeightChange={handleInputHeightChange}
             />
           </Box>
         </Paper>

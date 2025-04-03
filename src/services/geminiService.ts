@@ -112,33 +112,47 @@ export const generateStreamingResponse = async (
   try {
     const { temperature = 0.7, maxOutputTokens = 2048 } = options || {};
     
-    // Convert messages to Gemini format
-    const geminiMessages = messages.map(msg => ({
+    // Convert messages to Gemini format, excluding the latest user message
+    const historyMessages = messages.slice(0, -1).map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }],
     }));
 
-    // Add system prompt if provided
-    if (systemPrompt) {
-      geminiMessages.unshift({
-        role: 'user',
-        parts: [{ text: `System: ${systemPrompt}` }],
-      });
-    }
-
-    // Initialize Gemini chat
-    const chat = getGeminiClient().getGenerativeModel({ model: modelName }).startChat({
+    // Get the latest user message
+    const latestUserMessage = messages[messages.length - 1];
+    
+    // Initialize Gemini model
+    const model = getGeminiClient().getGenerativeModel({ model: modelName });
+    
+    // Create chat with system instruction if provided
+    const chatConfig: {
+      generationConfig: {
+        temperature: number;
+        maxOutputTokens: number;
+        topP: number;
+        topK: number;
+      };
+      history: Array<{role: string, parts: Array<{text: string}>}>;
+    } = {
       generationConfig: {
         temperature,
         maxOutputTokens,
         topP: 0.8,
         topK: 40,
       },
-      history: geminiMessages,
-    });
+      history: historyMessages,
+    };
+    
+    // Initialize the chat
+    const chat = model.startChat(chatConfig);
 
-    // Generate response with streaming
-    const result = await chat.sendMessageStream(geminiMessages[geminiMessages.length - 1].parts[0].text);
+    // If system prompt is provided, prepend it to the user's message
+    const messageToSend = systemPrompt && systemPrompt.trim() 
+      ? `[System: ${systemPrompt}]\n\nUser: ${latestUserMessage.content}`
+      : latestUserMessage.content;
+
+    // Generate response with streaming using the latest user message
+    const result = await chat.sendMessageStream(messageToSend);
     
     let fullResponse = '';
     for await (const chunk of result.stream) {
