@@ -33,6 +33,21 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [message, setMessage] = useState(initialMessage);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Add detection for PWA mode
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+
+  // Modified focus handling for PWA
+  const forceFocus = () => {
+    if (inputRef.current) {
+      // Delay focus slightly to ensure iOS registers it
+      setTimeout(() => {
+        inputRef.current?.focus();
+        // Scroll to input to ensure keyboard shows
+        inputRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  };
 
   // Update parent component with input height changes
   useEffect(() => {
@@ -59,20 +74,22 @@ const ChatInput: React.FC<ChatInputProps> = ({
   useEffect(() => {
     if (initialMessage) {
       setMessage(initialMessage);
-      
-      // Focus the input when we're editing a message
-      if (inputRef.current) {
+      if (isPWA) {
+        forceFocus();
+      } else if (inputRef.current) {
         inputRef.current.focus();
       }
     }
-  }, [initialMessage]);
+  }, [initialMessage, isPWA]);
 
   useEffect(() => {
     // Focus input on component mount
-    if (inputRef.current) {
+    if (isPWA) {
+      forceFocus();
+    } else if (inputRef.current) {
       inputRef.current.focus();
     }
-  }, []);
+  }, [isPWA]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,6 +127,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
     setMessage(e.target.value);
   };
 
+  const handleInputClick = (e: React.MouseEvent) => {
+    if (isPWA) {
+      e.preventDefault();
+      forceFocus();
+    }
+  };
+
   return (
     <Box
       component={motion.div}
@@ -126,12 +150,20 @@ const ChatInput: React.FC<ChatInputProps> = ({
         pt: 1,
         background: 'transparent',
         zIndex: 1300,
+        // Add PWA-specific positioning
+        ...(isPWA && isMobile && {
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+        })
       }}
     >
       <Box
         ref={containerRef}
         component="form"
         onSubmit={handleSubmit}
+        onClick={handleInputClick}
         sx={{
           display: 'flex',
           width: '100%',
@@ -147,6 +179,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
             backdropFilter: 'blur(10px)',
             borderTop: '1px solid',
             borderColor: 'divider',
+            // Add PWA-specific styles
+            ...(isPWA && {
+              position: 'relative',
+              zIndex: 1301,
+            })
           })
         }}
       >
@@ -160,29 +197,21 @@ const ChatInput: React.FC<ChatInputProps> = ({
           onChange={handleMessageChange}
           onKeyDown={handleKeyPress}
           disabled={isLoading}
+          inputRef={inputRef}
           inputProps={{
-            enterKeyHint: 'send',
-            'aria-label': 'Message input',
             inputMode: 'text',
-            // Force keyboard to show in PWA
-            readOnly: false,
-            style: {
-              // Ensure input is interactive on mobile
-              WebkitUserSelect: 'text',
-              WebkitTouchCallout: 'none',
-              // Prevent zoom on focus in iOS
-              fontSize: isMobile ? '16px' : 'inherit',
-              // Force hardware acceleration
-              transform: 'translateZ(0)',
-              WebkitTransform: 'translateZ(0)',
-            }
-          }}
-          // Add touch event handlers for PWA
-          onTouchStart={(e) => {
-            e.currentTarget.focus();
-          }}
-          onClick={(e) => {
-            e.currentTarget.focus();
+            enterKeyHint: 'send',
+            autoComplete: 'off',
+            autoCapitalize: 'sentences',
+            autoCorrect: 'on',
+            spellCheck: 'true',
+            // PWA-specific click handling
+            onClick: (e) => {
+              if (isPWA) {
+                e.preventDefault();
+                forceFocus();
+              }
+            },
           }}
           sx={{
             '& .MuiOutlinedInput-root': {
@@ -194,26 +223,19 @@ const ChatInput: React.FC<ChatInputProps> = ({
               minHeight: isMobile ? '44px' : 'auto',
               maxHeight: isMobile ? '120px' : '200px',
               overflowY: 'auto',
-              // Ensure input is tappable on mobile
-              cursor: 'text',
-              WebkitTapHighlightColor: 'transparent',
-              '& fieldset': {
-                borderColor: isMobile ? 'transparent' : 'divider',
-                borderWidth: isMobile ? '0 !important' : '1px',
-              },
-              '&:hover fieldset': {
-                borderColor: isMobile ? 'transparent' : 'grey.400',
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: isMobile ? 'transparent' : 'primary.main',
-              },
+              // Add iOS PWA specific styles
+              WebkitUserSelect: 'text',
+              WebkitTouchCallout: 'none',
               '& textarea': {
                 py: isMobile ? 0.75 : 2,
                 px: isMobile ? 1.5 : 2,
                 lineHeight: isMobile ? 1.2 : 1.5,
                 minHeight: isMobile ? '24px !important' : 'auto',
-                // Ensure proper scrolling on mobile
-                WebkitOverflowScrolling: 'touch',
+                // iOS PWA specific styles
+                cursor: 'text !important',
+                WebkitUserSelect: 'text !important',
+                userSelect: 'text !important',
+                // Keep existing styles
                 scrollbarWidth: 'thin',
                 scrollbarColor: '#444654 transparent',
                 '&::-webkit-scrollbar': {
@@ -235,12 +257,16 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   },
                 },
               },
-              // Add PWA-specific styles
-              WebkitAppearance: 'none',
-              WebkitOverflowScrolling: 'touch',
-              // Force hardware acceleration
-              transform: 'translateZ(0)',
-              WebkitTransform: 'translateZ(0)',
+              '& fieldset': {
+                borderColor: isMobile ? 'transparent' : 'divider',
+                borderWidth: isMobile ? '0 !important' : '1px',
+              },
+              '&:hover fieldset': {
+                borderColor: isMobile ? 'transparent' : 'grey.400',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: isMobile ? 'transparent' : 'primary.main',
+              },
             },
           }}
         />
