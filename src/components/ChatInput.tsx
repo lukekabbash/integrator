@@ -163,12 +163,16 @@ const ChatInput: React.FC<ChatInputProps> = ({
           inputProps={{
             enterKeyHint: 'send',
             'aria-label': 'Message input',
+            inputMode: 'text',
             style: {
               // Ensure input is interactive on mobile
               WebkitUserSelect: 'text',
               WebkitTouchCallout: 'none',
               // Prevent zoom on focus in iOS
               fontSize: isMobile ? '16px' : 'inherit',
+              // Fix for PWA keyboard issues
+              WebkitAppearance: 'none',
+              cursor: 'text'
             }
           }}
           sx={{
@@ -184,6 +188,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
               // Ensure input is tappable on mobile
               cursor: 'text',
               WebkitTapHighlightColor: 'transparent',
+              // Fix for PWA input issues
+              position: 'relative',
+              zIndex: 1,
               '& fieldset': {
                 borderColor: isMobile ? 'transparent' : 'divider',
                 borderWidth: isMobile ? '0 !important' : '1px',
@@ -203,6 +210,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 WebkitOverflowScrolling: 'touch',
                 scrollbarWidth: 'thin',
                 scrollbarColor: '#444654 transparent',
+                // Fix for PWA keyboard issues
+                WebkitAppearance: 'none',
+                cursor: 'text',
                 '&::-webkit-scrollbar': {
                   width: '8px',
                   position: 'absolute',
@@ -223,6 +233,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 },
               },
             },
+            // Fix for PWA input container
+            position: 'relative',
+            zIndex: 2,
           }}
         />
         

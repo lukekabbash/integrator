@@ -20,6 +20,10 @@
   ],
   "start_url": ".",
   "display": "standalone",
+  "orientation": "portrait",
   "theme_color": "#212121",
-  "background_color": "#333333"
+  "background_color": "#333333",
+  "prefer_related_applications": false,
+  "display_override": ["standalone", "minimal-ui"],
+  "categories": ["productivity", "utilities"]
 }
