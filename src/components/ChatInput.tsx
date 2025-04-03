@@ -160,6 +160,17 @@ const ChatInput: React.FC<ChatInputProps> = ({
           onChange={handleMessageChange}
           onKeyDown={handleKeyPress}
           disabled={isLoading}
+          inputProps={{
+            enterKeyHint: 'send',
+            'aria-label': 'Message input',
+            style: {
+              // Ensure input is interactive on mobile
+              WebkitUserSelect: 'text',
+              WebkitTouchCallout: 'none',
+              // Prevent zoom on focus in iOS
+              fontSize: isMobile ? '16px' : 'inherit',
+            }
+          }}
           sx={{
             '& .MuiOutlinedInput-root': {
               borderRadius: isMobile ? '20px' : '12px',
@@ -170,6 +181,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
               minHeight: isMobile ? '44px' : 'auto',
               maxHeight: isMobile ? '120px' : '200px',
               overflowY: 'auto',
+              // Ensure input is tappable on mobile
+              cursor: 'text',
+              WebkitTapHighlightColor: 'transparent',
               '& fieldset': {
                 borderColor: isMobile ? 'transparent' : 'divider',
                 borderWidth: isMobile ? '0 !important' : '1px',
@@ -185,6 +199,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 px: isMobile ? 1.5 : 2,
                 lineHeight: isMobile ? 1.2 : 1.5,
                 minHeight: isMobile ? '24px !important' : 'auto',
+                // Ensure proper scrolling on mobile
+                WebkitOverflowScrolling: 'touch',
                 scrollbarWidth: 'thin',
                 scrollbarColor: '#444654 transparent',
                 '&::-webkit-scrollbar': {
