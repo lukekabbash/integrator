@@ -164,16 +164,25 @@ const ChatInput: React.FC<ChatInputProps> = ({
             enterKeyHint: 'send',
             'aria-label': 'Message input',
             inputMode: 'text',
+            // Force keyboard to show in PWA
+            readOnly: false,
             style: {
               // Ensure input is interactive on mobile
               WebkitUserSelect: 'text',
               WebkitTouchCallout: 'none',
               // Prevent zoom on focus in iOS
               fontSize: isMobile ? '16px' : 'inherit',
-              // Fix for PWA keyboard issues
-              WebkitAppearance: 'none',
-              cursor: 'text'
+              // Force hardware acceleration
+              transform: 'translateZ(0)',
+              WebkitTransform: 'translateZ(0)',
             }
+          }}
+          // Add touch event handlers for PWA
+          onTouchStart={(e) => {
+            e.currentTarget.focus();
+          }}
+          onClick={(e) => {
+            e.currentTarget.focus();
           }}
           sx={{
             '& .MuiOutlinedInput-root': {
@@ -188,9 +197,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
               // Ensure input is tappable on mobile
               cursor: 'text',
               WebkitTapHighlightColor: 'transparent',
-              // Fix for PWA input issues
-              position: 'relative',
-              zIndex: 1,
               '& fieldset': {
                 borderColor: isMobile ? 'transparent' : 'divider',
                 borderWidth: isMobile ? '0 !important' : '1px',
@@ -210,9 +216,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 WebkitOverflowScrolling: 'touch',
                 scrollbarWidth: 'thin',
                 scrollbarColor: '#444654 transparent',
-                // Fix for PWA keyboard issues
-                WebkitAppearance: 'none',
-                cursor: 'text',
                 '&::-webkit-scrollbar': {
                   width: '8px',
                   position: 'absolute',
@@ -232,10 +235,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   },
                 },
               },
+              // Add PWA-specific styles
+              WebkitAppearance: 'none',
+              WebkitOverflowScrolling: 'touch',
+              // Force hardware acceleration
+              transform: 'translateZ(0)',
+              WebkitTransform: 'translateZ(0)',
             },
-            // Fix for PWA input container
-            position: 'relative',
-            zIndex: 2,
           }}
         />
         
