@@ -6,7 +6,8 @@ import {
   useTheme, 
   useMediaQuery,
   IconButton,
-  Drawer
+  Drawer,
+  TextField
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -43,6 +44,7 @@ interface ChatWindowProps {
   onRegenerateFromMessage?: (messageId: string, content: string) => void;
   onTemperatureChange: (value: number) => void;
   onMaxOutputTokensChange: (value: number) => void;
+  onEditChat?: (sessionId: string, newTitle: string) => void;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -70,7 +72,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onUpdateMessage,
   onRegenerateFromMessage,
   onTemperatureChange,
-  onMaxOutputTokensChange
+  onMaxOutputTokensChange,
+  onEditChat,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -81,6 +84,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [inputHeight, setInputHeight] = useState(0);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
 
   // Scroll to bottom whenever messages change or during loading
   useEffect(() => {
@@ -160,6 +165,31 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     setInputHeight(height);
   };
 
+  const handleStartTitleEdit = () => {
+    if (activeSession && activeSessionId) {
+      setIsEditingTitle(true);
+      setEditTitle(activeSession.title);
+    }
+  };
+
+  const handleSaveTitleEdit = () => {
+    if (activeSessionId && editTitle.trim() && onEditChat) {
+      onEditChat(activeSessionId, editTitle.trim());
+    }
+    setIsEditingTitle(false);
+    setEditTitle('');
+  };
+
+  const handleTitleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveTitleEdit();
+    } else if (e.key === 'Escape') {
+      setIsEditingTitle(false);
+      setEditTitle('');
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -191,9 +221,34 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           <IconButton onClick={() => setLeftSidebarOpen(true)} size="small">
             <MenuIcon />
           </IconButton>
-          <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
-            {activeSession?.title || 'New Chat'}
-          </Typography>
+          {isEditingTitle ? (
+            <TextField
+              size="small"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onKeyDown={handleTitleKeyPress}
+              onBlur={handleSaveTitleEdit}
+              autoFocus
+              sx={{
+                width: '60%',
+                '& .MuiOutlinedInput-root': {
+                  fontSize: '0.875rem',
+                  bgcolor: 'background.paper',
+                }
+              }}
+            />
+          ) : (
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                fontWeight: 'medium',
+                cursor: 'text'
+              }}
+              onDoubleClick={handleStartTitleEdit}
+            >
+              {activeSession?.title || 'New Chat'}
+            </Typography>
+          )}
           <IconButton onClick={() => setRightSidebarOpen(true)} size="small">
             <SettingsIcon />
           </IconButton>
@@ -231,6 +286,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               setLeftSidebarOpen(false);
             }}
             onDeleteChat={onDeleteChat}
+            onEditChat={onEditChat}
           />
         </Drawer>
       ) : (
@@ -240,6 +296,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           onSessionSelect={onSessionSelect}
           onNewChat={onNewChat}
           onDeleteChat={onDeleteChat}
+          onEditChat={onEditChat}
         />
       )}
 
@@ -275,7 +332,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             boxSizing: 'border-box',
           }}
         >
-          {/* Title bar with improved gradients */}
+          {/* Title bar */}
           <Box
             sx={{
               position: 'relative',
@@ -297,23 +354,57 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                 py: 1.5,
                 minWidth: 'auto',
                 maxWidth: '90%',
+                cursor: 'text',
               }}
+              onDoubleClick={handleStartTitleEdit}
             >
-              <Typography 
-                variant="subtitle1" 
-                sx={{ 
-                  color: '#fff',
-                  fontWeight: 500,
-                  textAlign: 'center',
-                  opacity: 0.9,
-                  fontSize: '14px',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {activeSession?.title || 'New Chat'}
-              </Typography>
+              {isEditingTitle ? (
+                <TextField
+                  size="small"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onKeyDown={handleTitleKeyPress}
+                  onBlur={handleSaveTitleEdit}
+                  autoFocus
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      fontSize: '14px',
+                      color: '#fff',
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      '& fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                      },
+                    },
+                    '& input': {
+                      color: '#fff',
+                      textAlign: 'center',
+                    },
+                    width: '200px',
+                  }}
+                />
+              ) : (
+                <Typography 
+                  variant="subtitle1" 
+                  sx={{ 
+                    color: '#fff',
+                    fontWeight: 500,
+                    textAlign: 'center',
+                    opacity: 0.9,
+                    fontSize: '14px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {activeSession?.title || 'New Chat'}
+                </Typography>
+              )}
             </Box>
           </Box>
 
@@ -322,12 +413,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             ref={messagesEndRef}
             sx={{
               flexGrow: 1,
-              overflow: 'auto',
+              overflow: messages.length === 0 ? 'hidden' : 'auto',
               position: 'relative',
               pb: isMobile ? '80px' : 0, // Fixed padding for mobile input
               scrollbarWidth: 'thin',
               scrollbarColor: '#444654 transparent',
-              overscrollBehavior: 'contain',
+              overscrollBehavior: messages.length === 0 ? 'none' : 'contain',
               WebkitOverflowScrolling: 'touch',
               height: '100%',
               maxHeight: '100%',
@@ -363,37 +454,57 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               {messages.length === 0 ? (
                 <Box
                   sx={{
-                    height: '100%',
+                    minHeight: 'calc(100vh - 180px)', // Account for header and input
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    opacity: 0.7,
-                    gap: isMobile ? 1 : 2,
+                    gap: isMobile ? 2 : 3,
+                    py: 4,
                   }}
                 >
-                  <Box>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      mb: 1,
+                    }}
+                  >
                     <Box
                       component="img"
                       src="/INT LOGO2.png"
                       alt="AI Integrator Logo"
                       sx={{ 
-                        width: isMobile ? '80px' : '120px',
+                        width: isMobile ? '100px' : '140px',
                         height: 'auto',
-                        opacity: 0.7
+                        opacity: 0.85,
+                        transition: 'opacity 0.2s ease-in-out',
+                        '&:hover': {
+                          opacity: 1
+                        }
                       }}
                     />
                   </Box>
-                  <Typography variant="body1" color="text.secondary">
+                  <Typography 
+                    variant="h6" 
+                    color="text.primary"
+                    sx={{ 
+                      opacity: 0.9,
+                      fontWeight: 500,
+                      textAlign: 'center'
+                    }}
+                  >
                     Start a conversation with AI Integrator
                   </Typography>
                   <Typography 
-                    variant="body2" 
+                    variant="body1" 
                     color="text.secondary" 
                     sx={{ 
                       maxWidth: '80%', 
                       textAlign: 'center',
-                      fontSize: isMobile ? '0.875rem' : '1rem'
+                      fontSize: isMobile ? '0.875rem' : '1rem',
+                      opacity: 0.75
                     }}
                   >
                     Your models, your way.

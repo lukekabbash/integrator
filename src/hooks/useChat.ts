@@ -4,6 +4,7 @@ import { Message, ChatSession, MessageRole, ALL_MODELS, Model, ModelProvider } f
 import { generateStreamingResponse, checkModelAvailability, getContentStream } from '../services/geminiService';
 import { generateOpenAIStreamingResponse, checkOpenAIModelAvailability } from '../services/openaiService';
 import { DEFAULT_SYSTEM_PROMPTS } from '../components/RightSidebar';
+import { generateChatTitle } from '../utils/titleGenerator';
 
 // Default system prompt
 const DEFAULT_SYSTEM_PROMPT = "You are a helpful, accurate, and friendly AI assistant. You provide detailed and thoughtful responses to user queries while striving to be as accurate and unbiased as possible. When you don't know something or aren't sure, you admit it clearly rather than making something up. You can assist with a wide range of tasks including answering questions, providing explanations, generating creative content, and more.";
@@ -547,6 +548,22 @@ export const useChat = () => {
               : session
           )
         );
+
+        // Generate title if this is the first message exchange
+        if (activeSession.messages.length === 0 && activeSession.title === 'New Chat') {
+          try {
+            const generatedTitle = await generateChatTitle(content, fullResponse);
+            setSessions(prev =>
+              prev.map(session =>
+                session.id === activeSessionId
+                  ? { ...session, title: generatedTitle }
+                  : session
+              )
+            );
+          } catch (titleError) {
+            console.error('Error generating title:', titleError);
+          }
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
         

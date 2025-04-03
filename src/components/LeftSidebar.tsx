@@ -12,12 +12,14 @@ import {
   Divider,
   InputAdornment,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Stack
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import ChatIcon from '@mui/icons-material/Chat';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EditIcon from '@mui/icons-material/Edit';
 import { ChatSession } from '../types/chat';
 
 interface LeftSidebarProps {
@@ -26,6 +28,7 @@ interface LeftSidebarProps {
   onSessionSelect: (sessionId: string) => void;
   onNewChat: () => void;
   onDeleteChat: (sessionId: string) => void;
+  onEditChat?: (sessionId: string, newTitle: string) => void;
 }
 
 const LeftSidebar: React.FC<LeftSidebarProps> = ({
@@ -34,10 +37,40 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
   onSessionSelect,
   onNewChat,
   onDeleteChat,
+  onEditChat,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+
+  const handleStartEdit = (sessionId: string, currentTitle: string) => {
+    setEditingSessionId(sessionId);
+    setEditTitle(currentTitle);
+  };
+
+  const handleSaveEdit = (sessionId: string) => {
+    if (editTitle.trim() && onEditChat) {
+      onEditChat(sessionId, editTitle.trim());
+    }
+    setEditingSessionId(null);
+    setEditTitle('');
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent, sessionId: string) => {
+    if (e.key === 'Enter') {
+      handleSaveEdit(sessionId);
+    } else if (e.key === 'Escape') {
+      setEditingSessionId(null);
+      setEditTitle('');
+    }
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent, session: ChatSession) => {
+    e.stopPropagation();
+    handleStartEdit(session.id, session.title);
+  };
 
   const filteredSessions = sessions.filter(session => 
     session.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -143,20 +176,11 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
             <ListItem
               key={session.id}
               disablePadding
-              secondaryAction={
-                <IconButton 
-                  edge="end" 
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteChat(session.id);
-                  }}
-                  sx={{ opacity: 0.6, '&:hover': { opacity: 1 } }}
-                >
-                  <DeleteOutlineIcon fontSize={isMobile ? "small" : "medium"} />
-                </IconButton>
-              }
-              sx={{ pr: 6 }}
+              sx={{ 
+                '&:hover .action-buttons': {
+                  opacity: 1,
+                },
+              }}
             >
               <ListItemButton
                 selected={session.id === activeSessionId}
@@ -166,6 +190,8 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
                   mx: 1,
                   my: 0.5,
                   py: isMobile ? 0.75 : 1,
+                  pr: 7,
+                  position: 'relative',
                   '&.Mui-selected': {
                     backgroundColor: 'action.selected',
                     '&:hover': {
@@ -178,21 +204,87 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
                   fontSize={isMobile ? "small" : "medium"}
                   sx={{ 
                     mr: 1.5, 
-                    color: 'text.secondary' 
+                    color: 'text.secondary',
+                    fontSize: '1.2rem',
                   }} 
                 />
-                <ListItemText 
-                  primary={session.title}
-                  primaryTypographyProps={{
-                    noWrap: true,
-                    fontSize: isMobile ? '0.875rem' : '0.9rem',
+                {editingSessionId === session.id ? (
+                  <TextField
+                    fullWidth
+                    size="small"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onKeyDown={(e) => handleKeyPress(e, session.id)}
+                    onBlur={() => handleSaveEdit(session.id)}
+                    autoFocus
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: isMobile ? '0.875rem' : '0.9rem',
+                        pr: 5.5,
+                      },
+                      maxWidth: 'calc(100% - 48px)',
+                    }}
+                  />
+                ) : (
+                  <ListItemText 
+                    onDoubleClick={(e) => handleDoubleClick(e, session)}
+                    primary={session.title}
+                    primaryTypographyProps={{
+                      noWrap: true,
+                      fontSize: isMobile ? '0.875rem' : '0.9rem',
+                    }}
+                    secondary={new Date(session.updatedAt).toLocaleDateString()}
+                    secondaryTypographyProps={{
+                      noWrap: true,
+                      fontSize: isMobile ? '0.75rem' : '0.8rem',
+                    }}
+                    sx={{
+                      cursor: 'text',
+                      maxWidth: 'calc(100% - 48px)',
+                    }}
+                  />
+                )}
+                <Stack 
+                  direction="row" 
+                  spacing={0.25}
+                  className="action-buttons"
+                  sx={{
+                    position: 'absolute',
+                    right: 1,
+                    opacity: 0,
+                    transition: 'opacity 0.2s ease-in-out',
+                    p: 0.25,
                   }}
-                  secondary={new Date(session.updatedAt).toLocaleDateString()}
-                  secondaryTypographyProps={{
-                    noWrap: true,
-                    fontSize: isMobile ? '0.75rem' : '0.8rem',
-                  }}
-                />
+                >
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStartEdit(session.id, session.title);
+                    }}
+                    sx={{ 
+                      opacity: 0.6,
+                      '&:hover': { opacity: 1 },
+                      padding: 0.5,
+                    }}
+                  >
+                    <EditIcon sx={{ fontSize: '1.1rem' }} />
+                  </IconButton>
+                  <IconButton 
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteChat(session.id);
+                    }}
+                    sx={{ 
+                      opacity: 0.6,
+                      '&:hover': { opacity: 1 },
+                      padding: 0.5,
+                    }}
+                  >
+                    <DeleteOutlineIcon sx={{ fontSize: '1.1rem' }} />
+                  </IconButton>
+                </Stack>
               </ListItemButton>
             </ListItem>
           ))
